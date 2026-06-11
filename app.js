@@ -313,8 +313,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (localStorage.getItem("oa_pending_order_time")) {
                 const timeStr = localStorage.getItem("oa_pending_order_time");
-                if (Date.now() - Number(timeStr) < 30 * 60 * 1000) { // 30 minutes cooldown
-                    return alert("Ya tienes un pedido reciente en proceso. Por favor completa tu compra anterior por WhatsApp antes de apartar más artículos.");
+                if (Date.now() - Number(timeStr) < 2 * 60 * 1000) { // 2 minutes cooldown
+                    return alert("El sistema está procesando tu pedido anterior. Por favor espera 2 minutos antes de hacer un nuevo pedido para evitar duplicados.");
                 }
             }
 
