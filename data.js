@@ -250,8 +250,11 @@ class Database {
 
     static async getPendingOrders() {
         this.requireAdminSession();
-        const snapshot = await db.collection("orders").where("status", "==", "pending").orderBy("createdAt", "desc").get();
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Quitamos el orderBy de Firebase para no requerir un índice compuesto nuevo,
+        // y ordenamos los resultados localmente de más reciente a más viejo.
+        const snapshot = await db.collection("orders").where("status", "==", "pending").get();
+        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }
 
     static async confirmOrder(orderId) {
