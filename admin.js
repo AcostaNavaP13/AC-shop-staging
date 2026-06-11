@@ -152,6 +152,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             await renderAdminTable();
             await renderOrdersTable();
+            
+            // Limpieza automática en segundo plano
+            Database.cleanupOldOrders();
         } catch(e) {
             console.error(e);
             alert("Error conectando con la base de datos.");
@@ -509,16 +512,25 @@ window.renderOrdersTable = async function() {
             const tr = document.createElement("tr");
             const dateStr = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleString() : "Reciente";
             
+            let commitHtml = "";
+            if (order.commitmentDate) {
+                const cDate = new Date(order.commitmentDate).toLocaleDateString();
+                commitHtml = `<div style="color:var(--apple-blue); font-weight:600; font-size:12px; margin-top:4px;">⏳ Límite: ${cDate}</div>`;
+            }
+
             let itemsHtml = order.items.map(item => `<div>${item.quantity}x ${item.name} (${item.size})</div>`).join("");
 
             tr.innerHTML = `
                 <td style="font-weight: 600;">${order.id}</td>
-                <td style="font-size: 13px;">${dateStr}</td>
+                <td style="font-size: 13px;">${dateStr}${commitHtml}</td>
                 <td style="font-size: 13px;">${itemsHtml}</td>
                 <td style="font-weight: 600;">$${Number(order.total).toFixed(2)}</td>
-                <td style="white-space: nowrap;">
+                <td style="white-space: nowrap; display: flex; gap: 8px;">
                     <button class="action-btn" onclick="confirmOrderBtn('${order.id}', this)" title="Marcar Vendido" style="color: var(--apple-green);">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </button>
+                    <button class="action-btn" onclick="setCommitmentBtn('${order.id}', this)" title="Marcar Anticipo / Fecha Límite" style="color: var(--apple-blue);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     </button>
                     <button class="action-btn" onclick="cancelOrderBtn('${order.id}', this)" title="Cancelar y Liberar Stock" style="color: var(--apple-red);">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
@@ -554,6 +566,25 @@ window.cancelOrderBtn = async function(id, btn) {
         renderAdminTable(); // Refresh products to show restored stock
     } catch(err) {
         alert("Error cancelando pedido: " + err.message);
+        btn.disabled = false;
+    }
+};
+
+window.setCommitmentBtn = async function(id, btn) {
+    const dateStr = prompt("Ingresa la nueva fecha límite de pago para este pedido (Formato: AAAA-MM-DD).\nEjemplo para 31 de Diciembre: 2026-12-31");
+    if (!dateStr) return;
+    
+    // Validate format roughly
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return alert("Formato incorrecto. Debe ser AAAA-MM-DD");
+    }
+
+    try {
+        btn.disabled = true;
+        await Database.setCommitmentDate(id, dateStr);
+        renderOrdersTable();
+    } catch (err) {
+        alert("Error asignando fecha: " + err.message);
         btn.disabled = false;
     }
 };

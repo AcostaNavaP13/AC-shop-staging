@@ -313,4 +313,73 @@ class Database {
             });
         });
     }
+
+    static async setCommitmentDate(orderId, dateStr) {
+        this.requireAdminSession();
+        // dateStr is YYYY-MM-DD. Set to end of day.
+        const commitDate = new Date(`${dateStr}T23:59:59`);
+        if (isNaN(commitDate.getTime())) throw new Error("Fecha inválida.");
+        
+        await db.collection("orders").doc(orderId).update({
+            commitmentDate: commitDate.toISOString(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    }
+
+    static async cleanupOldOrders() {
+        try {
+            const now = new Date();
+            
+            // 1. Auto-cancelar pedidos pendientes vencidos (24h o fecha límite)
+            const pendingSnapshot = await db.collection("orders").where("status", "==", "pending").get();
+            for (const doc of pendingSnapshot.docs) {
+                const order = doc.data();
+                const createdAt = order.createdAt?.toDate() || new Date();
+                let isExpired = false;
+                
+                if (order.commitmentDate) {
+                    const commitDate = new Date(order.commitmentDate);
+                    if (now > commitDate) isExpired = true;
+                } else {
+                    const diffHours = (now - createdAt) / (1000 * 60 * 60);
+                    if (diffHours >= 24) isExpired = true;
+                }
+                
+                if (isExpired) {
+                    console.log(`Auto-cancelando pedido vencido: ${doc.id}`);
+                    try {
+                        await this.cancelOrder(doc.id);
+                    } catch (err) {
+                        console.error(`No se pudo auto-cancelar el pedido ${doc.id}`, err);
+                    }
+                }
+            }
+
+            // 2. Eliminar pedidos cancelados o completados que tengan más de 7 días
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            const snapshot = await db.collection("orders")
+                .where("createdAt", "<", sevenDaysAgo)
+                .get();
+                
+            const batch = db.batch();
+            let count = 0;
+            
+            snapshot.forEach(doc => {
+                const order = doc.data();
+                if (order.status === "completed" || order.status === "cancelled") {
+                    batch.delete(doc.ref);
+                    count++;
+                }
+            });
+            
+            if (count > 0) {
+                await batch.commit();
+                console.log(`Se eliminaron automáticamente ${count} pedidos basura antiguos.`);
+            }
+        } catch(e) {
+            console.error("Error en limpieza automática de pedidos:", e);
+        }
+    }
 }
