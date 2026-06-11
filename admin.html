@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administrador</title>
+    <!-- Use Inter font to simulate iOS / Apple design -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link id="favicon" rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="admin-body">
+    <!-- Top Navigation Bar -->
+    <nav class="ios-nav">
+        <div class="nav-content">
+            <div style="display: flex; align-items: center;">
+                <span id="admin-navbar-title" style="font-weight: 700; font-size: 20px; letter-spacing: -0.5px;">Panel de Admin</span>
+            </div>
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <button id="theme-toggle" class="theme-btn ios-btn" style="width: auto; margin: 0; padding: 6px 14px; font-size: 14px; display: inline-flex; align-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Oscuro</button>
+                <a href="index.html" class="nav-link" style="display: inline-flex; align-items: center;" title="Ver Catálogo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container admin-container">
+        
+        <!-- Login Section -->
+        <section id="login-section" class="ios-card auth-card">
+            <h2>Acceso a Inventario</h2>
+            <p>Ingresa para gestionar los productos.</p>
+            <form id="login-form">
+                <input type="email" id="email" placeholder="Correo de administrador" required class="ios-input" />
+                <input type="password" id="password" placeholder="Contraseña" required class="ios-input" />
+                <button type="submit" class="ios-btn primary-btn">Ingresar</button>
+                <p id="login-error" class="form-message error-message" role="alert"></p>
+            </form>
+        </section>
+
+        <!-- Dashboard Section (Hidden by default) -->
+        <section id="dashboard-section" style="display: none;">
+            <div class="dashboard-layout">
+                <!-- Left Sidebar / Tabs Navigation -->
+                <div class="dashboard-sidebar-left">
+                    <button class="tab-btn active" onclick="switchAdminTab('tab-products', this)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><line x1="12" y1="22" x2="12" y2="15.5"></line><polyline points="22 8.5 12 15.5 2 8.5"></polyline><polyline points="2 15.5 12 8.5 22 15.5"></polyline><line x1="12" y1="2" x2="12" y2="8.5"></line></svg>
+                        Productos
+                    </button>
+                    <button class="tab-btn" onclick="switchAdminTab('tab-orders', this)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        Pedidos Pendientes
+                    </button>
+                    <button class="tab-btn" onclick="switchAdminTab('tab-settings', this)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Configuración
+                    </button>
+                    <button class="tab-btn" onclick="switchAdminTab('tab-import', this)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        Importar Masivo
+                    </button>
+                    <button id="logout-btn" class="tab-btn" style="margin-top: auto; color: #FF3B30;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Cerrar Sesión
+                    </button>
+                </div>
+
+                <!-- Main Content -->
+                <div class="dashboard-main">
+                    
+                    <!-- TAB: PRODUCTOS -->
+                    <div id="tab-products" class="tab-content active">
+                        <!-- Form to Add Product -->
+                        <div class="ios-card form-card">
+                            <h2 style="margin-bottom: 24px;">Añadir Nuevo Producto</h2>
+                            <form id="product-form" class="product-form">
+                                <input type="text" id="prod-name" placeholder="Nombre del producto" required class="ios-input" style="margin-bottom: 16px;" />
+                                
+                                <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                                    <input type="number" id="prod-price" placeholder="Precio ($)" step="0.01" required class="ios-input" style="margin-bottom: 0;" />
+                                    <input type="text" id="prod-category" placeholder="Artículo (ej. Playera)" required class="ios-input" style="margin-bottom: 0;" />
+                                    <input type="text" id="prod-brand" placeholder="Marca (ej. O&A)" required class="ios-input" style="margin-bottom: 0;" />
+                                </div>
+
+                                <!-- Dynamic Sizes Section -->
+                                <div class="sizes-wrapper" style="margin-bottom: 24px; background: #F8F8F8; padding: 16px; border-radius: 12px; border: 1px solid #E5E5EA;" id="dynamic-sizes-wrapper">
+                                    <label style="font-weight:600; display:block; margin-bottom:12px; font-size:15px; color: var(--text-primary);">Tallas y Stock:</label>
+                                    <div id="sizes-container" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                                        <!-- Default row -->
+                                        <div class="size-row" style="display:flex; gap:12px; align-items:center;">
+                                            <input type="text" class="ios-input size-name" placeholder="Talla (ej. S, Única)" style="margin:0; flex:1;" required />
+                                            <input type="number" class="ios-input size-qty" placeholder="Cantidad" style="margin:0; width:120px;" required min="0" />
+                                            <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;font-weight:bold;" title="Eliminar talla">&times;</button>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="ios-btn secondary-btn" onclick="addSizeRow()" style="width:auto; padding:8px 16px; font-size:14px; margin:0;">+ Añadir Otra Talla</button>
+                                </div>
+
+                                <label style="display: block; margin-bottom: 12px; font-weight: 600; color: var(--text-primary); font-size: 15px;">Imagen del producto (Máximo 3):</label>
+                                <input type="file" id="prod-image-input" accept="image/*" multiple class="ios-input" style="padding: 16px; background: transparent; margin-bottom: 16px;" />
+                                
+                                <div id="image-preview-container" class="image-preview-container">
+                                    <!-- Previews injected via JS -->
+                                </div>
+                                
+                                <button type="submit" class="ios-btn primary-btn" id="save-product-btn" style="margin-top: 24px;">Guardar Producto</button>
+                            </form>
+                        </div>
+
+                        <div class="inventory-section">
+                            <h2 style="margin-bottom: 24px;">Inventario Actual</h2>
+                            <!-- Product List Table -->
+                            <div class="ios-card table-card">
+                                <table class="ios-table">
+                                    <thead>
+                                        <tr>
+                                            <th>IMG</th>
+                                            <th>Nombre</th>
+                                            <th>Precio</th>
+                                            <th>Stock (Total)</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-product-list">
+                                        <!-- Injected by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: CONFIGURACIÓN -->
+                    <div id="tab-settings" class="tab-content">
+                        <!-- Form to Configure WhatsApp & Store -->
+                        <div class="ios-card form-card">
+                            <h2 style="margin-bottom: 24px;">Configuración de Tienda</h2>
+                            <form id="settings-form" class="product-form">
+                                <label for="store-logo" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Logo de la Tienda (Opcional):</label>
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                                    <img id="current-logo-preview" src="logo.png" style="height: 48px; object-fit: contain; border-radius: 8px; background: #FFF; padding: 4px; border: 1px solid #E5E5EA;" onerror="this.style.display='none'"/>
+                                    <input type="file" id="store-logo" accept="image/*" class="ios-input" style="padding: 12px; margin-bottom: 0; flex: 1; background: transparent;" />
+                                </div>
+
+                                <label for="store-name" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Nombre de la Tienda:</label>
+                                <input type="text" id="store-name" class="ios-input" placeholder="O&A Shop" style="margin-bottom: 24px;" />
+
+                                <label for="hero-title" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Título Principal (Catálogo):</label>
+                                <input type="text" id="hero-title" class="ios-input" placeholder="Luxury Collection" style="margin-bottom: 24px;" />
+
+                                <label for="hero-subtitle" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Subtítulo (Catálogo):</label>
+                                <input type="text" id="hero-subtitle" class="ios-input" placeholder="Descubre el estilo O&A para ti." style="margin-bottom: 24px;" />
+
+                                <label for="whatsapp-number" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Número de WhatsApp (con código de país, ej. 52...):</label>
+                                <input type="text" id="whatsapp-number" required class="ios-input" style="margin-bottom: 24px;" />
+                                
+                                <button type="submit" class="ios-btn primary-btn" style="background-color: var(--apple-green);">Guardar Configuración</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- TAB: IMPORTAR -->
+                    <div id="tab-import" class="tab-content">
+                        <!-- Import CSV Section -->
+                        <div class="ios-card form-card">
+                            <h2 style="margin-bottom: 24px;">Importar Inventario Masivo</h2>
+                            <p style="font-size: 15px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5;">Sube un archivo de Excel (.csv) para cargar todos tus productos de golpe, sin foto. Columnas requeridas: Nombre, Precio, Cantidad, Articulo, Marca, Talla.</p>
+                            <form id="csv-form" class="product-form">
+                                <input type="file" id="csv-file" accept=".csv" required class="ios-input" style="padding: 16px; background: transparent;" />
+                                <button type="submit" class="ios-btn secondary-btn" style="background-color: #E5E5EA; color: #000;">Cargar .CSV</button>
+                                <a href="plantilla.csv" download style="display: block; text-align: center; margin-top: 16px; font-size: 15px; color: var(--apple-blue); text-decoration: none; font-weight: 600;">⬇️ Bajar Plantilla de Excel</a>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- TAB: PEDIDOS PENDIENTES -->
+                    <div id="tab-orders" class="tab-content">
+                        <div class="ios-card inventory-card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+                                <h2 style="margin:0;">Pedidos Pendientes (24h)</h2>
+                                <button onclick="renderOrdersTable()" class="ios-btn secondary-btn" style="width:auto; margin:0; padding:8px 16px;">↻ Actualizar</button>
+                            </div>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Estos pedidos tienen stock reservado temporalmente. Si confirmas el pago, marca "Vendido". Si pasa mucho tiempo sin pago, cancela para regresar el stock a la tienda.</p>
+                            <div class="table-container">
+                                <table class="ios-table" id="orders-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID Pedido</th>
+                                            <th>Fecha/Hora</th>
+                                            <th>Artículos Reservados</th>
+                                            <th>Total</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orders-list">
+                                        <tr><td colspan="5" style="text-align:center;">Cargando pedidos...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Edit Sizes -->
+    <div id="edit-sizes-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="edit-sizes-title">Editar Tallas y Stock</h3>
+            
+            <div class="sizes-wrapper" style="margin-bottom: 24px; background: #F8F8F8; padding: 16px; border-radius: 12px; border: 1px solid #E5E5EA;" id="edit-dynamic-sizes-wrapper">
+                <div id="edit-sizes-container" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                    <!-- Injected via JS -->
+                </div>
+                <button type="button" class="ios-btn secondary-btn" onclick="addEditSizeRow()" style="width:auto; padding:8px 16px; font-size:14px; margin:0;">+ Añadir Otra Talla</button>
+            </div>
+
+            <button class="ios-btn primary-btn" onclick="saveEditedSizes()" style="margin-bottom: 10px;">Guardar Cambios</button>
+            <button class="ios-btn secondary-btn" onclick="closeEditSizesModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- Modal for Image Management -->
+    <div id="image-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title">Gestionar Fotos</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Máximo 3 fotos. La primera con borde azul es la principal.</p>
+            
+            <div id="modal-images-grid" class="modal-images-grid">
+                <!-- Images injected via JS -->
+            </div>
+
+            <label class="ios-btn primary-btn" style="cursor: pointer; margin-bottom: 10px;">
+                ➕ Subir más fotos
+                <input type="file" id="modal-file-input" style="display:none;" accept="image/*" multiple>
+            </label>
+            <button class="ios-btn secondary-btn" onclick="closeImageModal()">Cerrar</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
+    <script src="theme.js"></script>
+    <script src="data.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
