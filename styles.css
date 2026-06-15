@@ -44,7 +44,7 @@ body {
 }
 
 .nav-content {
-    max-width: 1000px;
+    max-width: 100%;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -76,7 +76,7 @@ body {
    Estructura Principal
    ========================================================================= */
 .container {
-    max-width: 1000px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 30px 20px;
 }
@@ -525,6 +525,7 @@ body.dark-theme .tab-btn:hover { background: rgba(255,255,255,0.05); }
 body.dark-theme .tab-btn.active { background: rgba(10, 132, 255, 0.15); color: #0A84FF; }
 body.dark-theme .ios-table th { background-color: #2C2C2E; border-color: #38383A; color: #8E8E93; }
 body.dark-theme .sizes-wrapper { background-color: #2C2C2E !important; border-color: #38383A !important; }
+body.dark-theme .settings-row { background-color: #2C2C2E !important; border-color: #38383A !important; }
 body.dark-theme .ios-table td { border-color: #38383A; }
 body.dark-theme .secondary-btn { background-color: #2C2C2E; color: #FFF; }
 body.dark-theme .action-btn { border-color: #38383A; }
@@ -664,4 +665,52 @@ body.dark-theme .modal-overlay { background: rgba(255,255,255,0.1); }
     .table-card {
         overflow-x: auto;
     }
+}
+
+/* =========================================================================
+   Product Card Hover Effects
+   ========================================================================= */
+.product-card-hover {
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+}
+
+.product-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0px 16px 40px rgba(0, 0, 0, 0.12);
+}
+
+body.dark-theme .product-card-hover:hover {
+    box-shadow: 0px 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-theme #product-modal-image-container {
+    background: #2C2C2E !important;
+}
+
+/* =========================================================================
+   Toggle Switch (Developer/Settings)
+   ========================================================================= */
+.switch input:checked + .slider {
+    background-color: var(--apple-green, #34C759) !important;
+}
+
+.switch input:focus + .slider {
+    box-shadow: 0 0 1px var(--apple-green, #34C759);
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }

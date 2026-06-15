@@ -61,6 +61,10 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         Importar Masivo
                     </button>
+                    <button class="tab-btn" onclick="openDeveloperAuth()" style="color: #5856D6;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Desarrollador
+                    </button>
                     <button id="logout-btn" class="tab-btn" style="margin-top: auto; color: #FF3B30;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                         Cerrar Sesión
@@ -74,15 +78,25 @@
                     <div id="tab-products" class="tab-content active">
                         <!-- Form to Add Product -->
                         <div class="ios-card form-card">
-                            <h2 style="margin-bottom: 24px;">Añadir Nuevo Producto</h2>
+                            <h2 id="product-form-title" style="margin-bottom: 24px;">Añadir Nuevo Producto</h2>
                             <form id="product-form" class="product-form">
                                 <input type="text" id="prod-name" placeholder="Nombre del producto" required class="ios-input" style="margin-bottom: 16px;" />
                                 
+                                <div style="display: flex; gap: 16px; margin-bottom: 16px; align-items: center;">
+                                    <input type="number" id="prod-price" placeholder="Precio Base ($)" step="0.01" required class="ios-input" style="margin-bottom: 0; flex:1;" />
+                                    <label style="display:flex; align-items:center; gap:6px; font-size:14px; white-space:nowrap; cursor:pointer;">
+                                        <input type="checkbox" id="prod-discount-enabled" />
+                                        <span>Descuento</span>
+                                    </label>
+                                    <input type="number" id="prod-discount-percent" placeholder="% Desc" step="1" min="1" max="99" class="ios-input" style="margin-bottom: 0; width:80px; display:none;" />
+                                </div>
+                                
                                 <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-                                    <input type="number" id="prod-price" placeholder="Precio ($)" step="0.01" required class="ios-input" style="margin-bottom: 0;" />
-                                    <input type="text" id="prod-category" placeholder="Artículo (ej. Playera)" required class="ios-input" style="margin-bottom: 0;" />
+                                    <input type="text" id="prod-category" placeholder="Categoría (ej. Playera)" required class="ios-input" style="margin-bottom: 0;" />
                                     <input type="text" id="prod-brand" placeholder="Marca (ej. O&A)" required class="ios-input" style="margin-bottom: 0;" />
                                 </div>
+
+                                <textarea id="prod-description" placeholder="Descripción del producto..." class="ios-input" style="margin-bottom: 16px; min-height: 80px; resize: vertical;"></textarea>
 
                                 <!-- Dynamic Sizes Section -->
                                 <div class="sizes-wrapper" style="margin-bottom: 24px; background: #F8F8F8; padding: 16px; border-radius: 12px; border: 1px solid #E5E5EA;" id="dynamic-sizes-wrapper">
@@ -105,7 +119,10 @@
                                     <!-- Previews injected via JS -->
                                 </div>
                                 
-                                <button type="submit" class="ios-btn primary-btn" id="save-product-btn" style="margin-top: 24px;">Guardar Producto</button>
+                                <div style="display:flex; gap:12px; margin-top:24px;">
+                                    <button type="submit" class="ios-btn primary-btn" id="save-product-btn" style="flex:1; margin-bottom:0;">Guardar Producto</button>
+                                    <button type="button" class="ios-btn secondary-btn" id="cancel-edit-btn" style="display:none; flex:1; margin-bottom:0;">Cancelar Edición</button>
+                                </div>
                             </form>
                         </div>
 
@@ -154,8 +171,59 @@
 
                                 <label for="whatsapp-number" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Número de WhatsApp (con código de país, ej. 52...):</label>
                                 <input type="text" id="whatsapp-number" required class="ios-input" style="margin-bottom: 24px;" />
+
+                                <label for="order-expiration" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">⏱️ Tiempo de expiración de pedidos (horas):</label>
+                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">Si un pedido sin anticipo no se paga en este tiempo, se cancela automáticamente y se regresa el inventario.</p>
+                                <select id="order-expiration" class="ios-select" style="width: 100%; margin-bottom: 24px; padding: 14px;">
+                                    <option value="1">1 hora</option>
+                                    <option value="2">2 horas</option>
+                                    <option value="4">4 horas</option>
+                                    <option value="6">6 horas</option>
+                                    <option value="12">12 horas</option>
+                                    <option value="24" selected>24 horas (predeterminado)</option>
+                                    <option value="48">48 horas</option>
+                                    <option value="72">72 horas</option>
+                                </select>
                                 
-                                <button type="submit" class="ios-btn primary-btn" style="background-color: var(--apple-green);">Guardar Configuración</button>
+                                <button type="submit" class="ios-btn primary-btn" style="background-color: var(--apple-green);">Guardar Configuración General</button>
+                            </form>
+                        </div>
+
+                        <!-- Form to Configure Banners -->
+                        <div class="ios-card form-card">
+                            <h2 style="margin-bottom: 24px;">Configuración de Banners</h2>
+                            <form id="banners-form" class="product-form">
+                                <p style="font-size: 14px; margin-bottom: 24px; color: var(--text-secondary);">Configura la cuadrícula de banners promocionales (1 principal grande, 2 laterales pequeños).</p>
+
+                                <h3 style="font-size: 16px; margin-bottom: 8px; border-bottom: 1px solid #E5E5EA; padding-bottom: 8px;">Banner Principal (Izquierda) <span title="Recomendado: 1200x600 px (Relación de aspecto 2:1)" style="cursor:help; background:#E5E5EA; border-radius:50%; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; color:#1c1c1e;">?</span></h3>
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                                    <img id="current-banner-main-preview" src="" style="height: 60px; width: 120px; object-fit: cover; border-radius: 8px; background: #FFF; padding: 0; border: 1px solid #E5E5EA; display: none;" />
+                                    <input type="file" id="store-banner-main" accept="image/*" class="ios-input" style="padding: 12px; margin-bottom: 0; flex: 1; background: transparent;" />
+                                </div>
+
+                                <h3 style="font-size: 16px; margin-bottom: 8px; border-bottom: 1px solid #E5E5EA; padding-bottom: 8px;">Banner Lateral 1 (Derecha Arriba) <span title="Recomendado: 600x290 px" style="cursor:help; background:#E5E5EA; border-radius:50%; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; color:#1c1c1e;">?</span></h3>
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                                    <img id="current-banner-side1-preview" src="" style="height: 60px; width: 120px; object-fit: cover; border-radius: 8px; background: #FFF; padding: 0; border: 1px solid #E5E5EA; display: none;" />
+                                    <input type="file" id="store-banner-side1" accept="image/*" class="ios-input" style="padding: 12px; margin-bottom: 0; flex: 1; background: transparent;" />
+                                </div>
+
+                                <h3 style="font-size: 16px; margin-bottom: 8px; border-bottom: 1px solid #E5E5EA; padding-bottom: 8px;">Banner Lateral 2 (Derecha Abajo) <span title="Recomendado: 600x290 px" style="cursor:help; background:#E5E5EA; border-radius:50%; width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; color:#1c1c1e;">?</span></h3>
+                                <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                                    <img id="current-banner-side2-preview" src="" style="height: 60px; width: 120px; object-fit: cover; border-radius: 8px; background: #FFF; padding: 0; border: 1px solid #E5E5EA; display: none;" />
+                                    <input type="file" id="store-banner-side2" accept="image/*" class="ios-input" style="padding: 12px; margin-bottom: 0; flex: 1; background: transparent;" />
+                                </div>
+
+                                <h3 style="font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid #E5E5EA; padding-bottom: 8px;">Sub-banners de Categorías circulares</h3>
+                                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">Sube una imagen para cada categoría para mostrarla como burbuja en el inicio.</p>
+
+                                <div class="sizes-wrapper" style="margin-bottom: 24px; background: #F8F8F8; padding: 16px; border-radius: 12px; border: 1px solid #E5E5EA;" id="cat-banners-wrapper">
+                                    <div id="cat-banners-container" style="display:flex; flex-direction:column; gap:12px; margin-bottom:16px;">
+                                        <!-- Inyectado por JS -->
+                                    </div>
+                                    <button type="button" class="ios-btn secondary-btn" onclick="addCatBannerRow()" style="width:auto; padding:8px 16px; font-size:14px; margin:0;">+ Añadir Banner de Categoría</button>
+                                </div>
+
+                                <button type="submit" class="ios-btn primary-btn" style="background-color: var(--apple-blue);">Guardar Banners</button>
                             </form>
                         </div>
                     </div>
@@ -178,7 +246,7 @@
                     <div id="tab-orders" class="tab-content">
                         <div class="ios-card inventory-card">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
-                                <h2 style="margin:0;">Pedidos Pendientes (24h)</h2>
+                                <h2 style="margin:0;">Pedidos Pendientes</h2>
                                 <button onclick="renderOrdersTable()" class="ios-btn secondary-btn" style="width:auto; margin:0; padding:8px 16px;">↻ Actualizar</button>
                             </div>
                             <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Estos pedidos tienen stock reservado temporalmente. Si confirmas el pago, marca "Vendido". Si pasa mucho tiempo sin pago, cancela para regresar el stock a la tienda.</p>
@@ -190,14 +258,61 @@
                                             <th>Fecha/Hora</th>
                                             <th>Artículos Reservados</th>
                                             <th>Total</th>
+                                            <th>Tiempo Restante</th>
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody id="orders-list">
-                                        <tr><td colspan="5" style="text-align:center;">Cargando pedidos...</td></tr>
+                                        <tr><td colspan="6" style="text-align:center;">Cargando pedidos...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- TAB: DESARROLLADOR -->
+                    <div id="tab-developer" class="tab-content" style="display: none;">
+                        <div class="ios-card form-card">
+                            <h2 style="margin-bottom: 24px; color: #5856D6;">Herramientas de Desarrollador</h2>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px;">Configuraciones maestras del sistema. Estas opciones afectan el comportamiento global de la aplicación.</p>
+                            
+                            <form id="dev-form" class="product-form">
+                                <div class="settings-row" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8f8f8; border-radius: 12px; margin-bottom: 16px; border: 1px solid #E5E5EA;">
+                                    <div>
+                                        <h3 style="margin:0 0 4px 0; font-size: 16px;">Pedidos / Carrito de Compras</h3>
+                                        <p style="margin:0; font-size: 12px; color: var(--text-secondary);">Habilita o deshabilita la opción de que los clientes hagan pedidos.</p>
+                                    </div>
+                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                        <input type="checkbox" id="dev-orders-enabled" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+                                    </label>
+                                </div>
+
+                                <div class="settings-row" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8f8f8; border-radius: 12px; margin-bottom: 24px; border: 1px solid #E5E5EA;">
+                                    <div>
+                                        <h3 style="margin:0 0 4px 0; font-size: 16px;">Banner Principal (Home)</h3>
+                                        <p style="margin:0; font-size: 12px; color: var(--text-secondary);">Muestra u oculta el banner promocional en la pantalla de inicio.</p>
+                                    </div>
+                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                        <input type="checkbox" id="dev-banner-enabled" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+                                    </label>
+                                </div>
+
+                                <div class="settings-row" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8f8f8; border-radius: 12px; margin-bottom: 24px; border: 1px solid #E5E5EA;">
+                                    <div>
+                                        <h3 style="margin:0 0 4px 0; font-size: 16px;">Sistema de Descuentos</h3>
+                                        <p style="margin:0; font-size: 12px; color: var(--text-secondary);">Habilita o apaga los descuentos (% y precios en rojo) en toda la tienda.</p>
+                                    </div>
+                                    <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 28px;">
+                                        <input type="checkbox" id="dev-discounts-enabled" style="opacity: 0; width: 0; height: 0;">
+                                        <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px;"></span>
+                                    </label>
+                                </div>
+
+                                <button type="submit" class="ios-btn primary-btn" style="background-color: #5856D6;">Aplicar Cambios Maestros</button>
+                            </form>
                         </div>
                     </div>
 

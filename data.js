@@ -1,20 +1,5 @@
 // ==========================================
-// 🔴 PRODUCCIÓN (Tienda Real) - COMENTADA AHORA
-// ==========================================
-/*
-firebase.initializeApp({
-  apiKey: "AIzaSyAK93hgItKQ3Hc0hQVeRIpoODCZoIzA-zQ",
-  authDomain: "oa-shop-d26fc.firebaseapp.com",
-  projectId: "oa-shop-d26fc",
-  storageBucket: "oa-shop-d26fc.firebasestorage.app",
-  messagingSenderId: "400060157479",
-  appId: "1:400060157479:web:c0941f42888002c95cc802",
-  measurementId: "G-MFRERF9CRM",
-});
-*/
-
-// ==========================================
-// 🟡 STAGING (Entorno de Pruebas) - ACTIVA AHORA
+// CONFIGURACIÓN DE FIREBASE
 // ==========================================
 firebase.initializeApp({
   apiKey: "AIzaSyA1ZXymQxaGufKRV3wzlKXv-DkUZx1M0ys",
@@ -40,6 +25,9 @@ class Database {
         return {
             name: String(product.name || "").trim(),
             price: Number(product.price),
+            discountEnabled: Boolean(product.discountEnabled),
+            discountPercent: Number(product.discountPercent || 0),
+            description: String(product.description || "").trim(),
             quantity: Number.parseInt(product.quantity, 10),
             category: String(product.category || "General").trim(),
             brand: String(product.brand || "Generica").trim(),
@@ -70,6 +58,15 @@ class Database {
         if(settings.heroTitle !== undefined) updateData.heroTitle = String(settings.heroTitle).trim();
         if(settings.heroSubtitle !== undefined) updateData.heroSubtitle = String(settings.heroSubtitle).trim();
         if(settings.logoUrl !== undefined) updateData.logoUrl = settings.logoUrl;
+        if(settings.orderExpirationHours !== undefined) updateData.orderExpirationHours = Number(settings.orderExpirationHours) || 24;
+        if(settings.bannerEnabled !== undefined) updateData.bannerEnabled = Boolean(settings.bannerEnabled);
+        if(settings.bannerImageUrl !== undefined) updateData.bannerImageUrl = settings.bannerImageUrl;
+        if(settings.bannerSide1Url !== undefined) updateData.bannerSide1Url = settings.bannerSide1Url;
+        if(settings.bannerSide2Url !== undefined) updateData.bannerSide2Url = settings.bannerSide2Url;
+        if(settings.bannerDuration !== undefined) updateData.bannerDuration = Number(settings.bannerDuration) || 0;
+        if(settings.categoryBanners !== undefined) updateData.categoryBanners = settings.categoryBanners;
+        if(settings.ordersEnabled !== undefined) updateData.ordersEnabled = Boolean(settings.ordersEnabled);
+        if(settings.discountsEnabled !== undefined) updateData.discountsEnabled = Boolean(settings.discountsEnabled);
 
         await db.collection("settings").doc("store").set(updateData, { merge: true });
     }
@@ -77,6 +74,14 @@ class Database {
     static async uploadLogoImage(dataUrl) {
         this.requireAdminSession();
         const path = `settings/logo_${Date.now()}.jpg`;
+        const ref = storage.ref().child(path);
+        await ref.putString(dataUrl, "data_url", { contentType: "image/jpeg" });
+        return ref.getDownloadURL();
+    }
+
+    static async uploadSettingImage(dataUrl, prefix = "banner") {
+        this.requireAdminSession();
+        const path = `settings/${prefix}_${Date.now()}.jpg`;
         const ref = storage.ref().child(path);
         await ref.putString(dataUrl, "data_url", { contentType: "image/jpeg" });
         return ref.getDownloadURL();
@@ -93,6 +98,33 @@ class Database {
         } catch(e) {
             console.error("Error al obtener productos:", e);
             return [];
+        }
+    }
+
+    static async updateProduct(id, product) {
+        this.requireAdminSession();
+        const cleanProduct = this.sanitizeProduct(product);
+
+        if (!cleanProduct.name || Number.isNaN(cleanProduct.price) || Number.isNaN(cleanProduct.quantity)) {
+            throw new Error("Revisa nombre, precio y stock del producto.");
+        }
+
+        const updateData = {
+            ...cleanProduct,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: auth.currentUser.uid,
+        };
+
+        const docRef = db.collection("products").doc(id);
+        await docRef.update(updateData);
+
+        if (product.imageDataUrls && product.imageDataUrls.length > 0) {
+            // Reemplazar o añadir imágenes. Para esta versión simple, si suben nuevas, agregamos a las existentes
+            const currentDoc = await docRef.get();
+            const currentUrls = currentDoc.data().imageUrls || [];
+            const newUrls = await this.uploadProductImages(id, product.imageDataUrls);
+            const mergedUrls = [...currentUrls, ...newUrls].slice(0, 3);
+            await docRef.update({ imageUrls: mergedUrls });
         }
     }
 
@@ -330,7 +362,11 @@ class Database {
         try {
             const now = new Date();
             
-            // 1. Auto-cancelar pedidos pendientes vencidos (24h o fecha límite)
+            // Leer tiempo de expiración configurado
+            const settings = await this.getSettings();
+            const expirationHours = Number(settings.orderExpirationHours) || 24;
+            
+            // 1. Auto-cancelar pedidos pendientes vencidos
             const pendingSnapshot = await db.collection("orders").where("status", "==", "pending").get();
             for (const doc of pendingSnapshot.docs) {
                 const order = doc.data();
@@ -338,11 +374,13 @@ class Database {
                 let isExpired = false;
                 
                 if (order.commitmentDate) {
+                    // Si tiene fecha compromiso, respetar esa fecha
                     const commitDate = new Date(order.commitmentDate);
                     if (now > commitDate) isExpired = true;
                 } else {
+                    // Sin compromiso, usar el tiempo configurable
                     const diffHours = (now - createdAt) / (1000 * 60 * 60);
-                    if (diffHours >= 24) isExpired = true;
+                    if (diffHours >= expirationHours) isExpired = true;
                 }
                 
                 if (isExpired) {
