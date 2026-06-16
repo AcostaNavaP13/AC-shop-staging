@@ -57,6 +57,8 @@ class Database {
         if(settings.storeName !== undefined) updateData.storeName = String(settings.storeName).trim();
         if(settings.heroTitle !== undefined) updateData.heroTitle = String(settings.heroTitle).trim();
         if(settings.heroSubtitle !== undefined) updateData.heroSubtitle = String(settings.heroSubtitle).trim();
+        if(settings.announcementEnabled !== undefined) updateData.announcementEnabled = Boolean(settings.announcementEnabled);
+        if(settings.announcementText !== undefined) updateData.announcementText = String(settings.announcementText).trim();
         if(settings.logoUrl !== undefined) updateData.logoUrl = settings.logoUrl;
         if(settings.orderExpirationHours !== undefined) updateData.orderExpirationHours = Number(settings.orderExpirationHours) || 24;
         if(settings.bannerEnabled !== undefined) updateData.bannerEnabled = Boolean(settings.bannerEnabled);
@@ -67,6 +69,7 @@ class Database {
         if(settings.categoryBanners !== undefined) updateData.categoryBanners = settings.categoryBanners;
         if(settings.ordersEnabled !== undefined) updateData.ordersEnabled = Boolean(settings.ordersEnabled);
         if(settings.discountsEnabled !== undefined) updateData.discountsEnabled = Boolean(settings.discountsEnabled);
+        if(settings.couponsEnabled !== undefined) updateData.couponsEnabled = Boolean(settings.couponsEnabled);
 
         await db.collection("settings").doc("store").set(updateData, { merge: true });
     }
@@ -85,6 +88,49 @@ class Database {
         const ref = storage.ref().child(path);
         await ref.putString(dataUrl, "data_url", { contentType: "image/jpeg" });
         return ref.getDownloadURL();
+    }
+
+    // ==========================================
+    // CUPOES
+    // ==========================================
+    static async getCoupons() {
+        const snap = await db.collection("coupons").orderBy("createdAt", "desc").get();
+        const coupons = [];
+        snap.forEach(doc => coupons.push({ id: doc.id, ...doc.data() }));
+        return coupons;
+    }
+
+    static async getCouponByCode(code) {
+        const snap = await db.collection("coupons").where("code", "==", code.toUpperCase().trim()).get();
+        if (snap.empty) return null;
+        return { id: snap.docs[0].id, ...snap.docs[0].data() };
+    }
+
+    static async addCoupon(couponData) {
+        this.requireAdminSession();
+        return db.collection("coupons").add({
+            ...couponData,
+            code: couponData.code.toUpperCase().trim(),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            usedByIps: []
+        });
+    }
+
+    static async updateCoupon(id, updates) {
+        this.requireAdminSession();
+        if (updates.code) updates.code = updates.code.toUpperCase().trim();
+        return db.collection("coupons").doc(id).update(updates);
+    }
+
+    static async deleteCoupon(id) {
+        this.requireAdminSession();
+        return db.collection("coupons").doc(id).delete();
+    }
+
+    static async markCouponUsedByIp(couponId, ip) {
+        return db.collection("coupons").doc(couponId).update({
+            usedByIps: firebase.firestore.FieldValue.arrayUnion(ip)
+        });
     }
 
     static async getProducts() {

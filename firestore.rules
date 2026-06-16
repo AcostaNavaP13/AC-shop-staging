@@ -21,6 +21,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedByIps']);
+    }
+
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
     match /admins/{userId} {
       allow read: if isAdmin() && request.auth.uid == userId;
       allow write: if false;

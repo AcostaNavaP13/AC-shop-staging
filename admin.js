@@ -8,6 +8,84 @@ let currentProductId = null;
 let currentImageUrls = [];
 let selectedFilesToUpload = [];
 
+// ==========================================
+// TOAST & LOGS SYSTEM
+// ==========================================
+const systemLogs = [];
+
+window.addLog = function(type, message) {
+    const time = new Date().toLocaleTimeString();
+    systemLogs.push(`[${time}] [${type.toUpperCase()}] ${message}`);
+    const logsContainer = document.getElementById("system-logs-container");
+    if(logsContainer) {
+        logsContainer.innerHTML = systemLogs.join("<br/>");
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+};
+
+window.copyLogsToClipboard = function() {
+    navigator.clipboard.writeText(systemLogs.join("\n"))
+        .then(() => alert("Logs copiados al portapapeles."))
+        .catch(err => console.error("Error al copiar logs:", err));
+};
+
+window.showToast = function(message, type = 'info') {
+    addLog(type, message);
+    const toast = document.createElement("div");
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 24px;
+        border-radius: 8px;
+        color: #000;
+        font-weight: 500;
+        font-size: 14px;
+        z-index: 99999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        opacity: 0;
+        transition: opacity 0.3s ease, bottom 0.3s ease;
+    `;
+    
+    if (type === 'error') {
+        toast.style.backgroundColor = '#FFE5E5';
+        toast.style.border = '1px solid #FF3B30';
+        toast.style.color = '#FF3B30';
+    } else if (type === 'success') {
+        toast.style.backgroundColor = '#E5F9E4';
+        toast.style.border = '1px solid #34C759';
+        toast.style.color = '#34C759';
+    } else {
+        toast.style.backgroundColor = '#FFF4E5';
+        toast.style.border = '1px solid #FF9500';
+        toast.style.color = '#FF9500';
+    }
+    
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => { toast.style.opacity = '1'; toast.style.bottom = '40px'; }, 10);
+    setTimeout(() => { 
+        toast.style.opacity = '0'; 
+        toast.style.bottom = '20px';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+};
+
+// Sobrescribir window.alert
+const originalAlert = window.alert;
+window.alert = function(msg) {
+    const lower = String(msg).toLowerCase();
+    let type = 'info';
+    if (lower.includes('error') || lower.includes('no se pudo') || lower.includes('inválido') || lower.includes('denegado')) {
+        type = 'error';
+    } else if (lower.includes('éxito') || lower.includes('correctamente') || lower.includes('exitosamente') || lower.includes('guardado')) {
+        type = 'success';
+    }
+    showToast(msg, type);
+};
+
 window.switchAdminTab = function(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
@@ -21,7 +99,7 @@ window.addSizeRow = function() {
     div.className = "size-row";
     div.style.cssText = "display:flex; gap:10px; align-items:center;";
     div.innerHTML = `
-        <input type="text" class="ios-input size-name" placeholder="Talla (ej. S, Única)" style="margin:0; flex:1;" required />
+        <input type="text" class="ios-input size-name" placeholder="Variante (ej. S, Única)" style="margin:0; flex:1;" required />
         <input type="number" class="ios-input size-qty" placeholder="Cantidad" style="margin:0; width:100px;" required min="0" />
         <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:18px;cursor:pointer;padding:0 8px;font-weight:bold;">&times;</button>
     `;
@@ -149,6 +227,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 expirationSelect.value = String(settings.orderExpirationHours);
             }
 
+            const announceEnabledInput = document.getElementById("announcement-enabled");
+            const announceTextInput = document.getElementById("announcement-text");
+            if (announceEnabledInput) announceEnabledInput.checked = settings.announcementEnabled === true;
+            if (announceTextInput) announceTextInput.value = settings.announcementText || "";
+
             if(settings.logoUrl) {
                 localStorage.setItem("oa_logo", settings.logoUrl);
                 const favicon = document.getElementById("favicon");
@@ -159,6 +242,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const devBanner = document.getElementById("dev-banner-enabled");
             const devOrders = document.getElementById("dev-orders-enabled");
             const devDiscounts = document.getElementById("dev-discounts-enabled");
+            const devCoupons = document.getElementById("dev-coupons-enabled");
+            const devRelated = document.getElementById("dev-related-enabled");
             const bannerMainPreview = document.getElementById("current-banner-main-preview");
             const bannerSide1Preview = document.getElementById("current-banner-side1-preview");
             const bannerSide2Preview = document.getElementById("current-banner-side2-preview");
@@ -166,6 +251,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if(devBanner) devBanner.checked = settings.bannerEnabled !== false;
             if(devOrders) devOrders.checked = settings.ordersEnabled !== false;
             if(devDiscounts) devDiscounts.checked = settings.discountsEnabled !== false;
+            if(devCoupons) devCoupons.checked = settings.couponsEnabled !== false;
+            if(devRelated) devRelated.checked = settings.relatedEnabled !== false;
             
             if(bannerMainPreview && settings.bannerImageUrl) { bannerMainPreview.src = settings.bannerImageUrl; bannerMainPreview.style.display = "block"; }
             if(bannerSide1Preview && settings.bannerSide1Url) { bannerSide1Preview.src = settings.bannerSide1Url; bannerSide1Preview.style.display = "block"; }
@@ -250,12 +337,17 @@ document.addEventListener("DOMContentLoaded", () => {
                     logoInput.value = "";
                 }
 
+                const announcementEnabled = document.getElementById("announcement-enabled") ? document.getElementById("announcement-enabled").checked : false;
+                const announcementText = document.getElementById("announcement-text") ? document.getElementById("announcement-text").value : "";
+
                 await Database.saveSettings({ 
                     whatsapp: newWhatsapp, 
                     storeName: newStoreName,
                     heroTitle: newHeroTitle,
                     heroSubtitle: newHeroSubtitle,
                     orderExpirationHours: orderExpiration,
+                    announcementEnabled,
+                    announcementText,
                     ...(logoUrl && { logoUrl })
                 });
 
@@ -374,11 +466,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const bannerEnabled = document.getElementById("dev-banner-enabled").checked;
             const ordersEnabled = document.getElementById("dev-orders-enabled").checked;
             const discountsEnabled = document.getElementById("dev-discounts-enabled").checked;
+            const couponsEnabled = document.getElementById("dev-coupons-enabled").checked;
+            const devRelated = document.getElementById("dev-related-enabled");
+            const relatedEnabled = devRelated ? devRelated.checked : true;
             
             try {
                 btn.innerText = "Aplicando...";
                 btn.disabled = true;
-                await Database.saveSettings({ bannerEnabled, ordersEnabled, discountsEnabled });
+                await Database.saveSettings({ bannerEnabled, ordersEnabled, discountsEnabled, couponsEnabled, relatedEnabled });
                 window.applyDevSettingsState();
                 alert("Cambios maestros aplicados.");
             } catch(err) {
@@ -469,9 +564,9 @@ document.addEventListener("DOMContentLoaded", () => {
             
             document.getElementById("sizes-container").innerHTML = `
                 <div class="size-row" style="display:flex; gap:12px; align-items:center;">
-                    <input type="text" class="ios-input size-name" placeholder="Talla (ej. S, Única)" style="margin:0; flex:1;" required />
+                    <input type="text" class="ios-input size-name" placeholder="Variante (ej. S, Única)" style="margin:0; flex:1;" required />
                     <input type="number" class="ios-input size-qty" placeholder="Cantidad" style="margin:0; width:120px;" required min="0" />
-                    <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;font-weight:bold;" title="Eliminar talla">&times;</button>
+                    <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;font-weight:bold;" title="Eliminar variante">&times;</button>
                 </div>
             `;
             editingProductId = null;
@@ -485,6 +580,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const p = doc.data();
 
             document.getElementById("prod-name").value = p.name || "";
+            const skuInput = document.getElementById("prod-sku");
+            if(skuInput) skuInput.value = p.sku || "";
             document.getElementById("prod-price").value = p.price || 0;
             
             const discEnabled = document.getElementById("prod-discount-enabled");
@@ -498,6 +595,11 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById("prod-category").value = p.category || "";
             document.getElementById("prod-brand").value = p.brand || "";
             document.getElementById("prod-description").value = p.description || "";
+            
+            const relInput = document.getElementById("prod-related-skus");
+            if (relInput) {
+                relInput.value = (p.relatedSkus && Array.isArray(p.relatedSkus)) ? p.relatedSkus.join(", ") : "";
+            }
 
             const sizesContainer = document.getElementById("sizes-container");
             sizesContainer.innerHTML = "";
@@ -546,6 +648,8 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
 
             const name = document.getElementById("prod-name").value.trim();
+            const skuInput = document.getElementById("prod-sku");
+            const sku = skuInput ? skuInput.value.trim().toUpperCase() : "";
             const price = parseFloat(document.getElementById("prod-price").value);
             const prodDiscountEnabled = document.getElementById("prod-discount-enabled");
             const discountEnabled = prodDiscountEnabled ? prodDiscountEnabled.checked : false;
@@ -554,6 +658,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const description = document.getElementById("prod-description").value.trim();
             const category = document.getElementById("prod-category").value.trim();
             const brand = document.getElementById("prod-brand").value.trim();
+            const relInput = document.getElementById("prod-related-skus");
+            const relatedSkus = relInput ? relInput.value.split(",").map(s => s.trim().toUpperCase()).filter(Boolean) : [];
             const btn = e.target.querySelector("#save-product-btn");
 
             const sizeRows = document.querySelectorAll(".size-row");
@@ -580,7 +686,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 const imageDataUrls = await filesToCompressedDataUrls(selectedFilesToUpload);
                 
                 const payload = { 
-                    name, 
+                    name,
+                    sku,
                     price, 
                     discountEnabled,
                     discountPercent,
@@ -589,6 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     sizes: sizesArray,
                     category, 
                     brand, 
+                    relatedSkus,
                     imageDataUrls 
                 };
 
@@ -604,9 +712,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 document.getElementById("sizes-container").innerHTML = `
                     <div class="size-row" style="display:flex; gap:12px; align-items:center;">
-                        <input type="text" class="ios-input size-name" placeholder="Talla (ej. S, Única)" style="margin:0; flex:1;" required />
+                        <input type="text" class="ios-input size-name" placeholder="Variante (ej. S, Única)" style="margin:0; flex:1;" required />
                         <input type="number" class="ios-input size-qty" placeholder="Cantidad" style="margin:0; width:120px;" required min="0" />
-                        <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;font-weight:bold;" title="Eliminar talla">&times;</button>
+                        <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;font-weight:bold;" title="Eliminar variante">&times;</button>
                     </div>
                 `;
                 
@@ -655,24 +763,26 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (!line) continue;
                         const row = line.split(",");
 
-                        if (row.length >= 6) {
-                            const name = row[0].trim();
-                            const price = parseFloat(row[1]);
-                            const qty = parseInt(row[2], 10);
-                            const category = row[3].trim();
-                            const brand = row[4].trim();
-                            const size = row[5].trim();
+                        if (row.length >= 7) {
+                            const sku = row[0].trim().toUpperCase();
+                            const name = row[1].trim();
+                            const price = parseFloat(row[2]);
+                            const qty = parseInt(row[3], 10);
+                            const category = row[4].trim();
+                            const brand = row[5].trim();
+                            const size = row[6].trim();
 
                             if (name && !Number.isNaN(price) && !Number.isNaN(qty)) {
-                                await Database.addProduct({ name, price, quantity: qty, category, brand, size });
+                                await Database.addProduct({ sku, name, price, quantity: qty, category, brand, size });
                                 count++;
                             }
-                        } else if (row.length >= 3) {
-                            const name = row[0].trim();
-                            const price = parseFloat(row[1]);
-                            const qty = parseInt(row[2], 10);
+                        } else if (row.length >= 4) {
+                            const sku = row[0].trim().toUpperCase();
+                            const name = row[1].trim();
+                            const price = parseFloat(row[2]);
+                            const qty = parseInt(row[3], 10);
                             if (name && !Number.isNaN(price) && !Number.isNaN(qty)) {
-                                await Database.addProduct({ name, price, quantity: qty, category: "General", brand: "Generica", size: "Unitalla" });
+                                await Database.addProduct({ sku, name, price, quantity: qty, category: "General", brand: "Generica", size: "Unitalla" });
                                 count++;
                             }
                         }
@@ -689,6 +799,94 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             };
             reader.readAsText(fileInput.files[0]);
+        });
+    }
+
+    const bulkImageForm = document.getElementById("bulk-image-form");
+    if (bulkImageForm) {
+        bulkImageForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById("bulk-image-files");
+            const files = fileInput.files;
+            if (!files || files.length === 0) return;
+
+            const btn = e.target.querySelector("button[type=submit]");
+            const statusDiv = document.getElementById("bulk-image-status");
+            btn.innerText = "Subiendo y vinculando...";
+            btn.disabled = true;
+            statusDiv.style.display = "block";
+            statusDiv.innerHTML = "Iniciando proceso...";
+            statusDiv.style.color = "var(--text-secondary)";
+
+            try {
+                // Fetch all products
+                const allProducts = await Database.getProducts();
+                
+                let successCount = 0;
+                let failedFiles = [];
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    statusDiv.innerHTML = `Procesando ${i + 1} de ${files.length}...`;
+                    
+                    // Regex to extract SKU from filename (e.g. SKU123_1.jpg, SKU-123.png)
+                    const fileName = file.name.split('.')[0];
+                    const skuMatch = fileName.split('_')[0].toUpperCase().trim();
+
+                    if (!skuMatch) {
+                        failedFiles.push(`${file.name} (Formato inválido)`);
+                        continue;
+                    }
+
+                    // Find corresponding product by exact SKU match
+                    const matchingProduct = allProducts.find(p => p.sku && p.sku.toUpperCase() === skuMatch);
+
+                    if (!matchingProduct) {
+                        failedFiles.push(`${file.name} (SKU no encontrado: ${skuMatch})`);
+                        continue;
+                    }
+
+                    // Upload Image
+                    try {
+                        const dataUrl = await compressImage(file);
+                        const downloadUrl = await Database.uploadProductImage(dataUrl);
+
+                        let currentImages = matchingProduct.images || [];
+                        if (currentImages.length >= 3) {
+                            failedFiles.push(`${file.name} (Límite de 3 fotos alcanzado en ${skuMatch})`);
+                            continue;
+                        }
+
+                        currentImages.push(downloadUrl);
+                        await Database.updateProduct(matchingProduct.id, { images: currentImages });
+                        
+                        // Local update to avoid full refetch if multiple images match same product
+                        matchingProduct.images = currentImages;
+                        successCount++;
+
+                    } catch (uploadErr) {
+                        failedFiles.push(`${file.name} (Error al subir: ${uploadErr.message})`);
+                    }
+                }
+
+                bulkImageForm.reset();
+                await renderAdminTable();
+
+                let finalMsg = `Proceso terminado. <br/><strong style="color:var(--apple-green);">Imágenes vinculadas: ${successCount}</strong>`;
+                if (failedFiles.length > 0) {
+                    finalMsg += `<br/><strong style="color:var(--apple-red);">Errores (${failedFiles.length}):</strong><ul style="color:var(--apple-red); font-size: 12px; margin-top:4px;">`;
+                    failedFiles.forEach(f => finalMsg += `<li>${escapeHtml(f)}</li>`);
+                    finalMsg += "</ul>";
+                }
+                statusDiv.innerHTML = finalMsg;
+
+            } catch (err) {
+                statusDiv.innerHTML = "Ocurrió un error general: " + escapeHtml(err.message);
+                statusDiv.style.color = "var(--apple-red)";
+            } finally {
+                btn.innerText = "Subir Imágenes por SKU";
+                btn.disabled = false;
+            }
         });
     }
 
@@ -734,14 +932,14 @@ async function renderAdminTable() {
     const listBody = document.getElementById("admin-product-list");
     if (!listBody) return;
 
-    listBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding: 24px;'>Descargando artículos...</td></tr>";
+    listBody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding: 24px;'>Descargando artículos...</td></tr>";
 
     try {
         const products = await Database.getProducts();
         listBody.innerHTML = "";
 
         if(products.length === 0) {
-             listBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding: 24px; color: #8e8e93'>Tu base de datos está vacía, no hay productos.</td></tr>";
+             listBody.innerHTML = "<tr><td colspan='6' style='text-align:center; padding: 24px; color: #8e8e93'>Tu base de datos está vacía, no hay productos.</td></tr>";
              return;
         }
 
@@ -759,11 +957,11 @@ async function renderAdminTable() {
                 stockHtml = `<div style="font-size:12px;color:#8E8E93;line-height:1.4;">${sizesStr}</div>
                              <div style="font-weight:600;margin-top:2px;">Total: ${p.quantity}</div>`;
                 const sizesJson = escapeHtml(JSON.stringify(p.sizes));
-                stockEditor = `<button class="ios-btn secondary-btn" style="padding:4px 8px; font-size:11px;" onclick="openEditSizesModal('${p.id}', '${sizesJson}')">Editar Tallas</button>`;
+                stockEditor = `<button class="ios-btn secondary-btn" style="padding:4px 8px; font-size:11px;" onclick="openEditSizesModal('${p.id}', '${sizesJson}')">Editar Variantes</button>`;
             } else {
-                metaText += ` • Talla: ${escapeHtml(p.size || "N/A")}`;
+                metaText += ` • Variante: ${escapeHtml(p.size || "N/A")}`;
                 stockHtml = `<div style="font-weight:600;">Total: ${p.quantity || 0}</div>`;
-                stockEditor = `<input type="number" value="${Number(p.quantity || 0)}" class="ios-input" style="width:70px; margin:0; padding:8px" id="stock-${p.id}" />`;
+                stockEditor = `<input type="number" value="${Number(p.quantity || 0)}" class="ios-input" style="width:70px; margin:0; padding:8px" id="stock-${p.id}" aria-label="Stock de ${productName}" title="Stock de ${productName}" />`;
             }
 
             const productId = escapeJs(p.id);
@@ -775,8 +973,9 @@ async function renderAdminTable() {
                     <div style="font-weight:600">${productName}</div>
                     <div style="font-size:11px; color:#8E8E93; margin-top:2px;">${metaText}</div>
                 </td>
+                <td><span style="background: #E5E5EA; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${escapeHtml(p.sku || "N/A")}</span></td>
                 <td>
-                    $<input type="number" step="0.01" value="${Number(p.price || 0)}" class="ios-input" style="width:80px; margin:0; padding:8px" id="price-${productId}" />
+                    $<input type="number" step="0.01" value="${Number(p.price || 0)}" class="ios-input" style="width:80px; margin:0; padding:8px" id="price-${productId}" aria-label="Precio de ${productName}" title="Precio de ${productName}" />
                     ${p.discountEnabled && p.discountPercent > 0 ? `<div style="font-size:11px; color:var(--apple-red); margin-top:4px;">-${p.discountPercent}% ($${(Number(p.price) * (1 - p.discountPercent/100)).toFixed(2)})</div>` : ''}
                 </td>
                 <td>
@@ -794,7 +993,7 @@ async function renderAdminTable() {
             listBody.appendChild(tr);
         });
     } catch(err) {
-        listBody.innerHTML = "<tr><td colspan='5' style='color:red;'>Error al cargar datos. Verifica los permisos de Firestore.</td></tr>";
+        listBody.innerHTML = "<tr><td colspan='6' style='color:red;'>Error al cargar datos. Verifica los permisos de Firestore.</td></tr>";
         console.error(err);
     }
 }
@@ -1066,7 +1265,7 @@ window.openEditSizesModal = function(productId, sizesJsonStr) {
         div.className = "size-row";
         div.style.cssText = "display:flex; gap:12px; align-items:center;";
         div.innerHTML = `
-            <input type="text" class="ios-input size-name" placeholder="Talla (ej. S, Única)" style="margin:0; flex:1;" required value="${escapeHtml(s.name)}" />
+            <input type="text" class="ios-input size-name" placeholder="Variante (ej. S, Única)" style="margin:0; flex:1;" required value="${escapeHtml(s.name)}" />
             <input type="number" class="ios-input size-qty" placeholder="Cantidad" style="margin:0; width:120px;" required min="0" value="${s.qty}" />
             <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;font-weight:bold;">&times;</button>
         `;
@@ -1086,7 +1285,7 @@ window.addEditSizeRow = function() {
     div.className = "size-row";
     div.style.cssText = "display:flex; gap:12px; align-items:center;";
     div.innerHTML = `
-        <input type="text" class="ios-input size-name" placeholder="Talla" style="margin:0; flex:1;" required />
+        <input type="text" class="ios-input size-name" placeholder="Variante" style="margin:0; flex:1;" required />
         <input type="number" class="ios-input size-qty" placeholder="Cantidad" style="margin:0; width:120px;" required min="0" />
         <button type="button" class="remove-size-btn" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;font-weight:bold;">&times;</button>
     `;
@@ -1122,12 +1321,12 @@ window.saveEditedSizes = async function() {
         
         closeEditSizesModal();
         await renderAdminTable();
-        alert("Tallas actualizadas correctamente.");
+        alert("Variantes actualizadas correctamente.");
         btn.innerText = oldText;
         btn.disabled = false;
     } catch(err) {
         console.error(err);
-        alert("Error guardando tallas: " + err.message);
+        alert("Error guardando variantes: " + err.message);
     }
 };
 window.openDeveloperAuth = function() {
@@ -1154,4 +1353,120 @@ window.addCatBannerRow = function(category = "", imageUrl = "") {
         <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--apple-red);font-size:22px;cursor:pointer;padding:0 8px;">&times;</button>
     `;
     container.appendChild(div);
+};
+// ==========================================
+// COUPONS LOGIC
+// ==========================================
+
+async function renderCouponsTable() {
+    const tbody = document.getElementById("coupons-tbody");
+    if(!tbody) return;
+    try {
+        const coupons = await Database.getCoupons();
+        tbody.innerHTML = coupons.map(c => `
+            <tr>
+                <td style="font-weight: 600;">${escapeHtml(c.code)}</td>
+                <td>${c.type === 'percent' ? c.value + '%' : '$' + c.value}</td>
+                <td>${c.expiryDate ? escapeHtml(c.expiryDate) : 'Sin caducidad'}</td>
+                <td>${c.singleUsePerIp ? 'Sí' : 'No'}</td>
+                <td>
+                    <span style="display:inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; background: ${c.active ? '#E5F9E4' : '#FEE5E5'}; color: ${c.active ? '#34C759' : '#FF3B30'};">
+                        ${c.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                </td>
+                <td>
+                    <button class="action-btn edit-btn" onclick="editCoupon('${c.id}', '${escapeJs(c.code)}', '${c.type}', '${c.value}', '${c.expiryDate || ""}', ${c.singleUsePerIp}, ${c.active})" style="margin-right:8px;">✏️</button>
+                    <button class="action-btn delete-btn" onclick="deleteCoupon('${c.id}', '${escapeJs(c.code)}')">🗑️</button>
+                </td>
+            </tr>
+        `).join("") || `<tr><td colspan="6" style="text-align:center; padding: 20px;">No hay cupones registrados.</td></tr>`;
+    } catch(err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Error cargando cupones</td></tr>`;
+    }
+}
+
+const couponForm = document.getElementById("coupon-form");
+if (couponForm) {
+    couponForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("coupon-id").value;
+        const code = document.getElementById("coupon-code").value.trim().toUpperCase();
+        const type = document.getElementById("coupon-type").value;
+        const value = Number(document.getElementById("coupon-value").value);
+        const expiryDate = document.getElementById("coupon-expiry").value;
+        const singleUsePerIp = document.getElementById("coupon-single-use").checked;
+        const active = document.getElementById("coupon-active").checked;
+
+        if (!code || isNaN(value) || value <= 0) return alert("Por favor llena los campos obligatorios correctamente.");
+
+        try {
+            const btn = e.target.querySelector("button[type=submit]");
+            btn.innerText = "Guardando...";
+            btn.disabled = true;
+
+            const data = { code, type, value, expiryDate: expiryDate || null, singleUsePerIp, active };
+
+            if (id) {
+                await Database.updateCoupon(id, data);
+            } else {
+                // Check if code exists
+                const existing = await Database.getCouponByCode(code);
+                if (existing) {
+                    btn.innerText = "Guardar Cupón";
+                    btn.disabled = false;
+                    return alert("Ya existe un cupón con ese código.");
+                }
+                await Database.addCoupon(data);
+            }
+
+            resetCouponForm();
+            await renderCouponsTable();
+            alert("Cupón guardado exitosamente.");
+        } catch(err) {
+            const btn = e.target.querySelector("button[type=submit]");
+            btn.innerText = id ? "Actualizar Cupón" : "Guardar Cupón";
+            btn.disabled = false;
+            alert("Error al guardar: " + err.message);
+        }
+    });
+}
+
+window.editCoupon = function(id, code, type, value, expiryDate, singleUse, active) {
+    document.getElementById("coupon-id").value = id;
+    document.getElementById("coupon-code").value = code;
+    document.getElementById("coupon-type").value = type;
+    document.getElementById("coupon-value").value = value;
+    document.getElementById("coupon-expiry").value = expiryDate;
+    document.getElementById("coupon-single-use").checked = singleUse;
+    document.getElementById("coupon-active").checked = active;
+    
+    document.querySelector("#coupon-form button[type=submit]").innerText = "Actualizar Cupón";
+    document.getElementById("coupon-code").focus();
+};
+
+window.resetCouponForm = function() {
+    document.getElementById("coupon-form").reset();
+    document.getElementById("coupon-id").value = "";
+    document.querySelector("#coupon-form button[type=submit]").innerText = "Guardar Cupón";
+    document.querySelector("#coupon-form button[type=submit]").disabled = false;
+};
+
+window.deleteCoupon = async function(id, code) {
+    if(!confirm(`¿Estás seguro de eliminar el cupón ${code}?`)) return;
+    try {
+        await Database.deleteCoupon(id);
+        await renderCouponsTable();
+    } catch(err) {
+        alert("Error al eliminar: " + err.message);
+    }
+};
+
+// Hook renderCouponsTable when switching tabs
+const originalSwitchAdminTab = window.switchAdminTab;
+window.switchAdminTab = function(tabId, btn) {
+    if (originalSwitchAdminTab) originalSwitchAdminTab(tabId, btn);
+    if (tabId === 'tab-coupons') {
+        renderCouponsTable();
+    }
 };
