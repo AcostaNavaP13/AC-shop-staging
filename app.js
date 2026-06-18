@@ -342,37 +342,41 @@ function renderGrid(productsToRender) {
         card.appendChild(imgContainer);
 
         card.insertAdjacentHTML("beforeend", `
-            <div class="product-header">
-                <h3 class="product-title">${escapeHtml(product.name)}</h3>
-                <div style="display: flex; align-items: baseline; gap: 6px;">
-                    ${IS_DISCOUNTS_ENABLED && product.discountEnabled && product.discountPercent > 0 ? 
-                        `<span style="font-size: 12px; text-decoration: line-through; color: #8E8E93;">$${Number(product.price).toFixed(2)}</span>
-                         <p class="product-price" style="color: var(--apple-red);">$${(Number(product.price) * (1 - product.discountPercent / 100)).toFixed(2)}</p>
-                         <span style="font-size: 10px; font-weight: bold; color: white; background-color: var(--apple-red); padding: 2px 6px; border-radius: 6px;">-${product.discountPercent}%</span>` 
-                    : `<p class="product-price">$${Number(product.price || 0).toFixed(2)}</p>`}
+            <div style="display: flex; flex-direction: column; flex-grow: 1;">
+                <div class="product-header" style="flex-wrap: wrap;">
+                    <h3 class="product-title" style="max-width: 100%; margin-bottom: 4px;">${escapeHtml(product.name)}</h3>
+                    <div style="display: flex; align-items: baseline; gap: 6px;">
+                        ${IS_DISCOUNTS_ENABLED && product.discountEnabled && product.discountPercent > 0 ? 
+                            `<span style="font-size: 12px; text-decoration: line-through; color: #8E8E93;">$${Number(product.price).toFixed(2)}</span>
+                             <p class="product-price" style="color: var(--apple-red);">$${(Number(product.price) * (1 - product.discountPercent / 100)).toFixed(2)}</p>
+                             <span style="font-size: 10px; font-weight: bold; color: white; background-color: var(--apple-red); padding: 2px 6px; border-radius: 6px;">-${product.discountPercent}%</span>` 
+                        : `<p class="product-price">$${Number(product.price || 0).toFixed(2)}</p>`}
+                    </div>
+                </div>
+                <p style="font-size: 11px; color: #8E8E93; margin-top: 4px; margin-bottom: 2px;">
+                    ${escapeHtml(product.category || "N/A")} • ${escapeHtml(product.brand || "N/A")}
+                </p>
+                <div style="margin-top: auto;">
+                    ${isOutOfStock ?
+                        `<p class="product-stock out-of-stock" style="margin-top: 10px; margin-bottom: 10px;">Agotado</p>`
+                       : 
+                        `<div style="font-size: 12px; color: var(--apple-blue); margin-top: 12px; font-weight: 500; text-align: left;">Ver detalles &rarr;</div>
+                         <div style="display:flex; gap:8px; margin-top:8px;" class="card-add-container" data-id="${escapeHtml(product.id)}">
+                            ${productSizes.length > 1 ? 
+                                `<select class="quick-variant-select" id="quick-var-${product.id}" onclick="event.stopPropagation();">
+                                    ${productSizes.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+                                </select>`
+                                : ''
+                            }
+                            <button class="ios-btn" style="background-color: var(--apple-green); color: white; display:flex; justify-content:center; align-items:center; margin:0; padding:12px; flex: ${productSizes.length > 1 ? 'none' : '1'}; width: ${productSizes.length > 1 ? '48px' : 'auto'}; font-size: 14px; font-weight: 600;" onclick="event.stopPropagation(); quickAddToCartInline('${escapeJs(product.id)}', event, ${productSizes.length > 1})">
+                                ${productSizes.length > 1 ? 
+                                    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>` 
+                                    : 'Añadir al carrito'}
+                            </button>
+                        </div>`
+                    }
                 </div>
             </div>
-            <p style="font-size: 11px; color: #8E8E93; margin-top: 4px; margin-bottom: 2px;">
-                ${escapeHtml(product.category || "N/A")} • ${escapeHtml(product.brand || "N/A")}
-            </p>
-            ${isOutOfStock ?
-                `<p class="product-stock out-of-stock" style="margin-top: 10px; margin-bottom: 10px;">Agotado</p>`
-               : 
-                `<div style="font-size: 12px; color: var(--apple-blue); margin-top: 12px; font-weight: 500; text-align: left;">Ver detalles &rarr;</div>
-                 <div style="display:flex; gap:8px; margin-top:8px;" class="card-add-container" data-id="${escapeHtml(product.id)}">
-                    ${productSizes.length > 1 ? 
-                        `<select class="quick-variant-select" id="quick-var-${product.id}" onclick="event.stopPropagation();">
-                            ${productSizes.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
-                        </select>`
-                        : ''
-                    }
-                    <button class="ios-btn" style="background-color: var(--apple-green); color: white; display:flex; justify-content:center; align-items:center; margin:0; padding:12px; flex: ${productSizes.length > 1 ? 'none' : '1'}; width: ${productSizes.length > 1 ? '48px' : 'auto'}; font-size: 14px; font-weight: 600;" onclick="event.stopPropagation(); quickAddToCartInline('${escapeJs(product.id)}', event, ${productSizes.length > 1})">
-                        ${productSizes.length > 1 ? 
-                            `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>` 
-                            : 'Añadir al carrito'}
-                    </button>
-                </div>`
-            }
         `);
         grid.appendChild(card);
     });
@@ -533,11 +537,13 @@ window.openProductModal = function(id) {
         relatedContainer.style.display = "none";
     }
 
+    document.body.style.overflow = 'hidden';
     document.getElementById('product-modal').style.display = 'flex';
 };
 
 window.closeProductModal = function() {
     document.getElementById('product-modal').style.display = 'none';
+    document.body.style.overflow = '';
 };
 
 function renderModalCarousel() {
@@ -750,8 +756,12 @@ window.addToCart = function(id, name, price, img, event) {
 
 window.toggleCart = function() {
     const modal = document.getElementById("cart-modal");
-    modal.style.display = modal.style.display === "flex" ? "none" : "flex";
     if (modal.style.display === "flex") {
+        modal.style.display = "none";
+        document.body.style.overflow = '';
+    } else {
+        modal.style.display = "flex";
+        document.body.style.overflow = 'hidden';
         updateCartUI();
     }
 };

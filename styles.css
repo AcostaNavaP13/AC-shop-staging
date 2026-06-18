@@ -178,6 +178,9 @@ body.dark-theme #oa-loading img {
     padding: 16px;
     box-shadow: var(--shadow-soft);
     transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .ios-card:active {
@@ -592,6 +595,8 @@ body.dark-theme .brand-logo {
     text-align: center;
     max-height: 90vh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .modal-content h3 { margin-bottom: 20px; }
@@ -652,12 +657,9 @@ body.dark-theme .modal-overlay { background: rgba(255,255,255,0.1); }
         width: 100%;
         position: static;
         flex-direction: row;
-        overflow-x: auto;
+        flex-wrap: wrap;
         padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
     }
-    .dashboard-sidebar-left::-webkit-scrollbar { display: none; }
     .tab-btn {
         white-space: nowrap;
         font-size: 13px;
@@ -682,6 +684,10 @@ body.dark-theme .modal-overlay { background: rgba(255,255,255,0.1); }
     .admin-container {
         padding-left: 12px;
         padding-right: 12px;
+    }
+
+    .auth-card, .form-card {
+        padding: 16px;
     }
 
     .product-form > div {
@@ -843,6 +849,8 @@ body.dark-theme #product-modal-image-container {
         flex-direction: column !important;
         max-height: 90vh;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
     }
     .split-modal-left {
         min-height: 280px !important;
