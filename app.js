@@ -165,7 +165,7 @@ async function renderCatalog() {
         renderCategoryBanners(settings);
 
         populateFilters();
-        renderGrid(allProducts);
+        processFilters();
     } catch(err) {
         console.error(err);
         grid.innerHTML = "<p style='color: red; grid-column: 1 / -1; text-align:center;'>Hubo un error al cargar los productos.</p>";
