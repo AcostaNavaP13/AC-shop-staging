@@ -3,6 +3,7 @@ let IS_ORDERS_ENABLED = true;
 let IS_DISCOUNTS_ENABLED = true;
 let IS_COUPONS_ENABLED = false;
 let IS_RELATED_ENABLED = true;
+let IS_MERCADOPAGO_ENABLED = false;
 let appliedCoupon = null;
 let userIpAddress = "unknown";
 let allProducts = [];
@@ -112,6 +113,7 @@ async function renderCatalog() {
         IS_DISCOUNTS_ENABLED = settings.discountsEnabled !== false;
         IS_COUPONS_ENABLED = settings.couponsEnabled !== false;
         IS_RELATED_ENABLED = settings.relatedEnabled !== false;
+        IS_MERCADOPAGO_ENABLED = settings.mercadopagoEnabled === true;
 
         // Fetch IP if coupons are enabled
         if (IS_COUPONS_ENABLED && userIpAddress === "unknown") {
@@ -837,6 +839,23 @@ window.updateCartUI = function() {
     }
 
     totalEl.innerText = `$${finalTotal.toFixed(2)}`;
+
+    const checkoutBtn = document.getElementById("checkout-btn");
+    if (checkoutBtn) {
+        if (IS_MERCADOPAGO_ENABLED) {
+            checkoutBtn.style.backgroundColor = "#009EE3";
+            checkoutBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: text-bottom;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+                Pagar con Mercado Pago
+            `;
+        } else {
+            checkoutBtn.style.backgroundColor = "var(--apple-green)";
+            checkoutBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px; vertical-align: text-bottom;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                Comprar por WhatsApp
+            `;
+        }
+    }
 };
 
 window.applyCoupon = async function() {
@@ -958,78 +977,94 @@ document.addEventListener("DOMContentLoaded", () => {
             checkoutBtn.disabled = true;
 
             try {
-                let orderId = "";
-                
-                if (IS_ORDERS_ENABLED) {
-                    // Validar stock antes de hacer checkout
-                    const freshProducts = await Database.getProducts();
-                    for (const item of cart) {
-                        const prod = freshProducts.find(p => p.id === item.id);
-                        if (!prod) {
-                            throw new Error(`El producto "${item.name}" ya no existe en la tienda.`);
+                // Verificar stock con la DB central
+                for (const item of cart) {
+                    const productDb = await Database.getProduct(item.id);
+                    if (!productDb) throw new Error(`El producto ${item.name} ya no existe en el catálogo.`);
+
+                    if (item.size && item.size !== 'N/A') {
+                        const variant = (productDb.sizes || []).find(s => s.name === item.size);
+                        if (!variant || variant.qty < item.quantity) {
+                            throw new Error(`Stock insuficiente para ${item.name} (Talla: ${item.size}). Disponible: ${variant ? variant.qty : 0}`);
                         }
-                        if (prod.sizes && prod.sizes.length > 0) {
-                            const sizeObj = prod.sizes.find(s => s.name.trim() === item.size);
-                            if (!sizeObj || sizeObj.qty < item.quantity) {
-                                throw new Error(`No hay suficiente stock de variante ${item.size} para "${item.name}". Ajusta la cantidad en tu carrito.`);
-                            }
-                        } else if (prod.quantity < item.quantity) {
-                            throw new Error(`No hay suficiente stock para "${item.name}". Solo quedan ${prod.quantity} unidades.`);
-                        }
-                    }
-                    
-                    orderId = await Database.createPendingOrder(cart);
-                    localStorage.setItem("oa_pending_order_time", Date.now().toString());
-                } else {
-                    orderId = "WA-" + Math.floor(1000 + Math.random() * 9000);
-                }
-
-                let message = `¡Hola! Quisiera consultar la disponibilidad de este pedido:\n*ID: ${orderId}*\n\n`;
-                let total = 0;
-
-                cart.forEach(item => {
-                    const subtotal = Number(item.price) * Number(item.quantity);
-                    total += subtotal;
-                    message += `- ${item.quantity}x ${item.name} (Variante: ${item.size}) - $${subtotal.toFixed(2)}\n`;
-                });
-
-                message += `\n*SUBTOTAL: $${total.toFixed(2)}*\n`;
-                
-                let discountValue = 0;
-                if (appliedCoupon) {
-                    if (appliedCoupon.type === 'percent') {
-                        discountValue = total * (appliedCoupon.value / 100);
                     } else {
-                        discountValue = appliedCoupon.value;
+                        if ((productDb.quantity || 0) < item.quantity) {
+                            throw new Error(`Stock insuficiente para ${item.name}. Disponible: ${productDb.quantity || 0}`);
+                        }
                     }
-                    if (discountValue > total) discountValue = total;
+                }
+
+                // Si hay stock, generar Order ID y registrar en Firebase (descuenta stock temporalmente)
+                const paymentMethod = IS_MERCADOPAGO_ENABLED ? 'Mercado Pago' : 'WhatsApp';
+                const { orderId, orderTotal } = await Database.createPendingOrder(cart, appliedCoupon || null, paymentMethod);
+                localStorage.setItem("oa_pending_order_time", Date.now().toString());
+
+                // For Mercado Pago item weight calculation if there's a coupon
+                const currentCartTotal = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
+                let discountAmount = currentCartTotal - orderTotal;
+
+                if (IS_MERCADOPAGO_ENABLED) {
+                    // FLUJO DE MERCADO PAGO
+                    const mpItems = cart.map(item => {
+                        let subtotal = Number(item.price);
+                        if (appliedCoupon && discountAmount > 0) {
+                            const itemWeight = (Number(item.price) * item.quantity) / currentCartTotal;
+                            const itemDiscount = discountAmount * itemWeight;
+                            subtotal = Number(item.price) - (itemDiscount / item.quantity);
+                        }
+                        return {
+                            title: item.name + (item.size && item.size !== 'N/A' ? ` (${item.size})` : ''),
+                            quantity: Number(item.quantity),
+                            unit_price: Number(subtotal)
+                        };
+                    });
+
+                    const response = await fetch("https://76355ac2-441f-468c-b32b-bec37422bbfd-00-weavba13bqvj.spock.replit.dev/api/create_preference", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ items: mpItems })
+                    });
+
+                    if (!response.ok) {
+                        const errorDetail = await response.text();
+                        console.error("Error del backend:", errorDetail);
+                        throw new Error(`Detalle del servidor: ${errorDetail}`);
+                    }
+
+                    const data = await response.json();
                     
-                    message += `*CUPÓN (${appliedCoupon.code}): -$${discountValue.toFixed(2)}*\n`;
-                    total -= discountValue;
-
-                    if (appliedCoupon.singleUsePerIp && userIpAddress !== "unknown") {
-                        await Database.markCouponUsedByIp(appliedCoupon.id, userIpAddress);
-                    }
-                }
-
-                message += `*TOTAL: $${total.toFixed(2)}*\n\n¿Tienen disponibilidad y cómo procedemos con el envío/pago?`;
-
-                const encodedMessage = encodeURIComponent(message);
-                
-                appliedCoupon = null;
-                
-                cart = [];
-                saveCart();
-                if (IS_ORDERS_ENABLED) {
-                    renderCatalog(); // Reload to show updated stock
+                    cart = [];
+                    localStorage.removeItem("oa_cart");
+                    appliedCoupon = null;
+                    localStorage.removeItem("oa_applied_coupon");
+                    
+                    window.location.href = `https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=${data.id}`;
                 } else {
-                    updateCartUI(); // Just clear cart visually
+                    // FLUJO DE WHATSAPP
+                    let msg = `Hola, quiero hacer el pedido ${orderId} con los siguientes artículos:\n\n`;
+                    cart.forEach(item => {
+                        msg += `- ${item.quantity}x ${item.name} `;
+                        if (item.size && item.size !== 'N/A') msg += `(Talla: ${item.size}) `;
+                        msg += `- $${(item.price * item.quantity).toFixed(2)}\n`;
+                    });
+                    
+                    if (appliedCoupon) {
+                        msg += `\nCupón aplicado: ${appliedCoupon.code} (-$${discountAmount.toFixed(2)})`;
+                    }
+                    msg += `\nTotal: $${orderTotal.toFixed(2)}`;
+                    
+                    cart = [];
+                    localStorage.removeItem("oa_cart");
+                    appliedCoupon = null;
+                    localStorage.removeItem("oa_applied_coupon");
+                    updateCartUI();
+                    
+                    document.getElementById("cart-modal").style.display = "none";
+                    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+                    
+                    checkoutBtn.innerHTML = oldHtml;
+                    checkoutBtn.disabled = false;
                 }
-                toggleCart();
-                
-                window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`, "_blank");
-                checkoutBtn.innerHTML = oldHtml;
-                checkoutBtn.disabled = false;
             } catch(err) {
                 console.error(err);
                 alert("No se pudo procesar tu pedido: " + err.message);

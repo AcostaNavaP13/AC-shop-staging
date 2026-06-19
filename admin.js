@@ -244,6 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const devDiscounts = document.getElementById("dev-discounts-enabled");
             const devCoupons = document.getElementById("dev-coupons-enabled");
             const devRelated = document.getElementById("dev-related-enabled");
+            const devMercadoPago = document.getElementById("dev-mercadopago-enabled");
             const bannerMainPreview = document.getElementById("current-banner-main-preview");
             const bannerSide1Preview = document.getElementById("current-banner-side1-preview");
             const bannerSide2Preview = document.getElementById("current-banner-side2-preview");
@@ -253,6 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if(devDiscounts) devDiscounts.checked = settings.discountsEnabled !== false;
             if(devCoupons) devCoupons.checked = settings.couponsEnabled !== false;
             if(devRelated) devRelated.checked = settings.relatedEnabled !== false;
+            if(devMercadoPago) devMercadoPago.checked = settings.mercadopagoEnabled === true;
             
             if(bannerMainPreview && settings.bannerImageUrl) { bannerMainPreview.src = settings.bannerImageUrl; bannerMainPreview.style.display = "block"; }
             if(bannerSide1Preview && settings.bannerSide1Url) { bannerSide1Preview.src = settings.bannerSide1Url; bannerSide1Preview.style.display = "block"; }
@@ -469,11 +471,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const couponsEnabled = document.getElementById("dev-coupons-enabled").checked;
             const devRelated = document.getElementById("dev-related-enabled");
             const relatedEnabled = devRelated ? devRelated.checked : true;
+            const devMercadoPago = document.getElementById("dev-mercadopago-enabled");
+            const mercadopagoEnabled = devMercadoPago ? devMercadoPago.checked : false;
             
             try {
                 btn.innerText = "Aplicando...";
                 btn.disabled = true;
-                await Database.saveSettings({ bannerEnabled, ordersEnabled, discountsEnabled, couponsEnabled, relatedEnabled });
+                await Database.saveSettings({ bannerEnabled, ordersEnabled, discountsEnabled, couponsEnabled, relatedEnabled, mercadopagoEnabled });
                 window.applyDevSettingsState();
                 alert("Cambios maestros aplicados.");
             } catch(err) {
@@ -1040,10 +1044,16 @@ window.renderOrdersTable = async function() {
                 commitHtml = `<div style="color:var(--apple-blue); font-weight:600; font-size:12px; margin-top:4px;">⏳ Límite: ${cDate}</div>`;
             }
 
+            let paymentBadge = "";
+            if (order.paymentMethod) {
+                const isMp = order.paymentMethod === 'Mercado Pago';
+                paymentBadge = `<div style="margin-top: 4px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-block; background-color: ${isMp ? '#E5F3FF' : '#E5F9E4'}; color: ${isMp ? '#009EE3' : '#34C759'};">${escapeHtml(order.paymentMethod)}</div>`;
+            }
+
             let itemsHtml = order.items.map(item => `<div>${item.quantity}x ${item.name} (${item.size})</div>`).join("");
 
             tr.innerHTML = `
-                <td style="font-weight: 600;">${order.id}</td>
+                <td style="font-weight: 600;">${order.id}<br/>${paymentBadge}</td>
                 <td style="font-size: 13px;">${dateStr}${commitHtml}</td>
                 <td style="font-size: 13px;">${itemsHtml}</td>
                 <td style="font-weight: 600;">$${Number(order.total).toFixed(2)}</td>

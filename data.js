@@ -70,6 +70,8 @@ class Database {
         if(settings.ordersEnabled !== undefined) updateData.ordersEnabled = Boolean(settings.ordersEnabled);
         if(settings.discountsEnabled !== undefined) updateData.discountsEnabled = Boolean(settings.discountsEnabled);
         if(settings.couponsEnabled !== undefined) updateData.couponsEnabled = Boolean(settings.couponsEnabled);
+        if(settings.relatedEnabled !== undefined) updateData.relatedEnabled = Boolean(settings.relatedEnabled);
+        if(settings.mercadopagoEnabled !== undefined) updateData.mercadopagoEnabled = Boolean(settings.mercadopagoEnabled);
 
         await db.collection("settings").doc("store").set(updateData, { merge: true });
     }
@@ -145,6 +147,12 @@ class Database {
             console.error("Error al obtener productos:", e);
             return [];
         }
+    }
+
+    static async getProduct(id) {
+        const doc = await db.collection("products").doc(id).get();
+        if (!doc.exists) return null;
+        return { id: doc.id, ...doc.data() };
     }
 
     static async updateProduct(id, product) {
@@ -276,9 +284,20 @@ class Database {
 
     // --- ORDERS MANAGEMENT ---
 
-    static async createPendingOrder(cartItems) {
+    static async createPendingOrder(cartItems, coupon = null, paymentMethod = 'WhatsApp') {
         const orderId = "PED-" + Math.floor(1000 + Math.random() * 9000);
-        const total = cartItems.reduce((acc, item) => acc + (Number(item.price) * Number(item.quantity)), 0);
+        let total = cartItems.reduce((acc, item) => acc + (Number(item.price) * Number(item.quantity)), 0);
+        
+        if (coupon) {
+            let discountAmount = 0;
+            if (coupon.type === 'percent') {
+                discountAmount = total * (coupon.value / 100);
+            } else {
+                discountAmount = coupon.value;
+            }
+            if (discountAmount > total) discountAmount = total;
+            total -= discountAmount;
+        }
         
         await db.runTransaction(async (transaction) => {
             const productRefs = cartItems.map(item => db.collection("products").doc(item.id));
@@ -318,12 +337,14 @@ class Database {
             transaction.set(orderRef, {
                 items: cartItems,
                 total: total,
+                coupon: coupon,
+                paymentMethod: paymentMethod,
                 status: "pending",
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         });
         
-        return orderId;
+        return { orderId, orderTotal: total };
     }
 
     static async getPendingOrders() {
