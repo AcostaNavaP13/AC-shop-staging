@@ -87,16 +87,16 @@
             <!-- Main Catalog Area -->
             <div style="flex: 1; min-width: 0;">
                 <!-- Toolbar -->
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                    <div><span id="results-count" style="font-size: 16px; font-weight: 600; color: var(--text-primary);">0 Resultados</span></div>
-                    <div style="display:flex; align-items:center; gap: 24px;">
-                        <button id="toggle-sidebar-btn" onclick="toggleSidebar()" style="background:none; border:none; cursor:pointer; font-weight:500; font-size:14px; display:flex; align-items:center; gap:6px; color: var(--text-primary);">
-                            Ocultar filtros <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"></path></svg>
+                <div class="catalog-toolbar">
+                    <div class="results-count-container"><span id="results-count">0 Resultados</span></div>
+                    <div class="toolbar-actions">
+                        <button id="toggle-sidebar-btn" class="toolbar-btn" onclick="toggleSidebar()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"></path></svg> <span class="btn-text">Filtros</span>
                         </button>
                         
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="font-weight:500; font-size:14px; color: var(--text-secondary);">Ordenar por</span>
-                            <select id="sort-price" onchange="processFilters()" style="margin:0; padding:6px 10px; width:auto; border:none; background:transparent; font-weight:600; font-size:14px; cursor:pointer; outline:none; color: var(--text-primary);">
+                        <div class="sort-container">
+                            <span class="sort-label">Ordenar por</span>
+                            <select id="sort-price" onchange="processFilters()" class="sort-select">
                                 <option value="">Relevancia</option>
                                 <option value="asc">Precio: Menor a Mayor</option>
                                 <option value="desc">Precio: Mayor a Menor</option>
@@ -115,21 +115,21 @@
         <script>
             function toggleSidebar() {
                 const sidebar = document.getElementById("filters-sidebar");
-                const btn = document.getElementById("toggle-sidebar-btn");
+                const btnText = document.querySelector("#toggle-sidebar-btn .btn-text");
                 const isVisible = sidebar.style.display === "block" || (getComputedStyle(sidebar).display !== "none");
                 if (isVisible) {
                     sidebar.style.display = "none";
-                    btn.innerHTML = 'Mostrar filtros <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"></path></svg>';
+                    if (btnText) btnText.textContent = "Filtros";
                 } else {
                     sidebar.style.display = "block";
-                    btn.innerHTML = 'Ocultar filtros <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"></path></svg>';
+                    if (btnText) btnText.textContent = "Ocultar";
                 }
             }
-            // On mobile, default button text to "Mostrar filtros"
+            // On mobile, default button text to "Filtros"
             if (window.innerWidth <= 768) {
                 document.addEventListener("DOMContentLoaded", function() {
-                    const btn = document.getElementById("toggle-sidebar-btn");
-                    if (btn) btn.innerHTML = 'Filtros <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"></path></svg>';
+                    const btnText = document.querySelector("#toggle-sidebar-btn .btn-text");
+                    if (btnText) btnText.textContent = "Filtros";
                 });
             }
         </script>

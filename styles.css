@@ -554,7 +554,7 @@ body.dark-theme .cart-footer-border { border-color: #38383A !important; }
 body.dark-theme .filter-section { border-color: #38383A !important; }
 body.dark-theme .modal-content .split-modal-left { background: #2C2C2E !important; border-color: #38383A !important; }
 body.dark-theme #product-modal .modal-content button[onclick="closeProductModal()"] { color: #FFF; background: rgba(255,255,255,0.15); }
-
+body.dark-theme .toolbar-actions { background-color: #2C2C2E !important; }
 /* Invertir el logo para modo oscuro y quitarle el fondo blanco (que ahora se volvió negro) */
 body.dark-theme .brand-logo {
     filter: invert(1) contrast(1.2);
@@ -645,81 +645,211 @@ body.dark-theme .brand-logo {
     font-size: 14px;
 }
 
-body.dark-theme .modal-overlay { background: rgba(255,255,255,0.1); }
-
-body.dark-theme .modal-overlay { background: rgba(255,255,255,0.1); }
-
+/* =========================================================================
+   Admin Panel — Mobile Overrides
+   ========================================================================= */
 @media (max-width: 768px) {
+    /* --- Dashboard Layout --- */
     .dashboard-layout {
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
     }
+
+    /* --- Tab Navigation: icon-only horizontal bar --- */
     .dashboard-sidebar-left {
         width: 100%;
         position: static;
         flex-direction: row;
-        flex-wrap: wrap;
-        padding-bottom: 10px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 0;
+        padding: 4px 0 8px 0;
+        border-bottom: 1px solid var(--border-color);
+        justify-content: space-around;
     }
+    .dashboard-sidebar-left::-webkit-scrollbar { display: none; }
+
+    /* Hide text, show only icons */
     .tab-btn {
-        white-space: nowrap;
-        font-size: 13px;
+        font-size: 0 !important;
+        line-height: 0;
         padding: 10px 14px;
-        min-width: max-content;
-        flex: 1 1 auto;
-        text-align: center;
+        min-width: 0;
+        gap: 0;
+        flex: 1;
         justify-content: center;
+        align-items: center;
     }
     .tab-btn svg {
-        display: none;
+        display: block !important;
+        width: 22px;
+        height: 22px;
     }
+
+    /* --- Container & Cards: full-width, tight padding --- */
     .admin-container {
         max-width: 100%;
+        padding-left: 10px;
+        padding-right: 10px;
     }
+
+    .dashboard-main {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .auth-card,
+    .form-card,
+    .inventory-card {
+        padding: 16px !important;
+        border-radius: 14px;
+    }
+
+    /* Table cards must NOT get extra padding — keep padding:0 for scroll */
+    .table-card {
+        padding: 0 !important;
+        overflow: auto !important;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 14px;
+    }
+
+    /* --- Navbar --- */
     .ios-nav .nav-content {
         gap: 8px;
     }
     #admin-navbar-title {
         font-size: 16px !important;
     }
+
+    /* --- Form flex rows: stack vertically ---
+         Excludes sizes-wrapper, settings-row, ios-switch-container */
+    .product-form > div:not(.settings-row):not(.ios-switch-container):not(.sizes-wrapper) {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    /* Inputs inside stacked rows take full width —
+       EXCLUDE inputs inside .size-row to keep variant rows horizontal */
+    .product-form > div:not(.sizes-wrapper) input[type="text"],
+    .product-form > div:not(.sizes-wrapper) input[type="number"],
+    .product-form > div:not(.sizes-wrapper) select,
+    .product-form > div:not(.sizes-wrapper) .ios-input,
+    .product-form > div:not(.sizes-wrapper) .ios-select {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    /* Nested wrapper divs (e.g. coupons Tipo/Valor) also stretch */
+    .product-form > div:not(.sizes-wrapper) > div {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    /* --- Variant size rows: stay horizontal, tighter --- */
+    .size-row {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        align-items: center !important;
+    }
+    .size-row .size-name {
+        flex: 1 1 0% !important;
+        width: auto !important;
+        min-width: 0 !important;
+    }
+    .size-row .size-qty {
+        width: 80px !important;
+        flex: 0 0 80px !important;
+    }
+
+    /* --- Tables: scrollable with fixed min-width --- */
+    .table-container {
+        overflow: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .ios-table {
+        min-width: 600px;
+    }
+    .ios-table th,
+    .ios-table td {
+        white-space: nowrap;
+        font-size: 13px;
+        padding: 12px 10px;
+    }
+
+    /* --- Fix buttons row at bottom of form (keep horizontal) --- */
+    .product-form > div:last-child {
+        flex-direction: row !important;
+    }
 }
 
-@media (max-width: 680px) {
-    .admin-container {
-        padding-left: 12px;
-        padding-right: 12px;
-    }
-
-    .auth-card, .form-card {
-        padding: 16px;
-    }
-
-    .product-form > div:not(.settings-row):not(.ios-switch-container) {
-        flex-direction: column;
-        align-items: stretch !important;
-    }
-
-    .size-row {
-        gap: 8px !important;
-    }
-    
-    .size-qty {
-        width: 80px !important;
-    }
-
-    .ios-table {
-        min-width: 640px;
-    }
-
-    .table-card {
-        overflow-x: auto;
-    }
+/* =========================================================================
+   Catálogo - Barra de Herramientas (Toolbar)
+   ========================================================================= */
+.catalog-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+.toolbar-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-primary);
+}
+.sort-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sort-label {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+.sort-select {
+    margin: 0;
+    padding: 6px 10px;
+    width: auto;
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    color: var(--text-primary);
 }
 
 /* =========================================================================
    Mobile Catalog & Filters
    ========================================================================= */
 @media (max-width: 768px) {
+    /* Prevent horizontal scroll / empty space on right */
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
+    }
+
+    /* Reduce inline padding from <main> so grid fits properly */
+    main.container {
+        padding: 16px !important;
+    }
+
     /* Hide filter sidebar by default on mobile */
     #filters-sidebar {
         display: none;
@@ -728,11 +858,46 @@ body.dark-theme .modal-overlay { background: rgba(255,255,255,0.1); }
     .catalog-layout {
         flex-direction: column !important;
         gap: 16px !important;
+        margin-top: 16px !important;
     }
     
     #filters-sidebar {
         width: 100% !important;
         order: -1;
+    }
+
+    /* Clean Toolbar Styling for Mobile */
+    .catalog-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        margin-bottom: 20px !important;
+    }
+    .results-count-container {
+        display: none; /* Hide '0 Resultados' to save space */
+    }
+    .toolbar-actions {
+        width: 100% !important;
+        justify-content: space-between !important;
+        background: #E5E5EA; /* Clean light gray bar */
+        padding: 6px 12px !important;
+        border-radius: 12px;
+        gap: 8px !important;
+    }
+    .toolbar-btn {
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        color: var(--apple-blue) !important;
+    }
+    .sort-label {
+        display: none !important; /* Hide 'Ordenar por' to save space */
+    }
+    .sort-select {
+        padding: 6px 4px !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        color: var(--apple-blue) !important;
+        text-align: right;
     }
 
     /* Make grid 2 columns on mobile */
@@ -741,22 +906,23 @@ body.dark-theme .modal-overlay { background: rgba(255,255,255,0.1); }
         gap: 12px !important;
     }
     
+    .ios-card {
+        padding: 12px !important;
+    }
+
     .product-image {
-        height: 180px;
+        height: 160px;
+        border-radius: 10px;
     }
     
     .product-title {
         font-size: 14px;
-        max-width: 60%;
+        max-width: 100%; /* Give title full width on mobile */
+        margin-bottom: 4px;
     }
     
     .product-price {
         font-size: 15px;
-    }
-    
-    /* Toolbar on mobile */
-    #toggle-sidebar-btn {
-        font-size: 12px !important;
     }
     
     .page-header h2 {
