@@ -3,11 +3,20 @@ const cors = require('cors');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const app = express();
-app.use(cors());
+
+// Solo aceptar peticiones desde tu tienda (no de sitios desconocidos)
+app.use(cors({
+    origin: [
+        'http://localhost:5500',
+        'http://127.0.0.1:5500',
+        // TODO: Cuando publiques tu tienda, agrega aquí tu dominio real:
+        // 'https://tu-tienda.com'
+    ]
+}));
 app.use(express.json());
 
-// TODO: Reemplazar con tu Access Token de producción o prueba de Mercado Pago
-const client = new MercadoPagoConfig({ accessToken: 'APP_USR-7598487038100771-061915-e2d1d6e2cb9856346cfd692db81a4427-1115153999' });
+// Access Token desde variable de entorno de Vercel (NUNCA poner la llave directamente aquí)
+const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
 app.post('/create_preference', async (req, res) => {
     try {
@@ -29,6 +38,8 @@ app.post('/create_preference', async (req, res) => {
                 pending: "http://localhost:5500/index.html"  // Si va al Oxxo
             },
             auto_return: "approved",
+            external_reference: req.body.orderId,
+            notification_url: "https://ac-shop-staging.vercel.app/webhook"
         };
 
         const preference = new Preference(client);

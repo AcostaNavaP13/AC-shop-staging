@@ -285,7 +285,8 @@ class Database {
     // --- ORDERS MANAGEMENT ---
 
     static async createPendingOrder(cartItems, coupon = null, paymentMethod = 'WhatsApp') {
-        const orderId = "PED-" + Math.floor(1000 + Math.random() * 9000);
+        // Generamos un ID de pedido más seguro y casi irrepetible
+        const orderId = "PED-" + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1000);
         let total = cartItems.reduce((acc, item) => acc + (Number(item.price) * Number(item.quantity)), 0);
         
         if (coupon) {

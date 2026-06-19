@@ -22,13 +22,19 @@ service cloud.firestore {
     }
 
     match /coupons/{couponId} {
-      allow read: if true;
+      // Solo el admin puede ver la lista completa de cupones
+      allow list: if isAdmin();
+      // Cualquiera puede buscar un cupón individual (para validar código en el carrito)
+      allow get: if true;
       allow create, delete: if isAdmin();
       allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedByIps']);
     }
 
     match /orders/{orderId} {
-      allow read, write: if true;
+      // Cualquiera puede CREAR un pedido (al comprar)
+      allow create: if true;
+      // Solo el admin puede leer, modificar o cancelar pedidos
+      allow read, update, delete: if isAdmin();
     }
 
     match /admins/{userId} {

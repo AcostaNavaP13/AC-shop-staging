@@ -1022,7 +1022,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     const response = await fetch("https://ac-shop-staging.vercel.app/create_preference", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ items: mpItems })
+                        body: JSON.stringify({ items: mpItems, orderId: orderId })
                     });
 
                     if (!response.ok) {
