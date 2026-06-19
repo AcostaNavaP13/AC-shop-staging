@@ -44,6 +44,26 @@ app.post('/create_preference', async (req, res) => {
     }
 });
 
+// NUEVO: Endpoint para recibir Webhooks de Mercado Pago
+app.post('/webhook', async (req, res) => {
+    try {
+        const query = req.query;
+        const body = req.body;
+        
+        // Mercado Pago nos avisa por aquí cuando un pago cambia de estado.
+        // Por ahora solo le decimos "Recibido, gracias" para que no nos marque error.
+        // En el futuro, aquí conectaremos con Firebase para actualizar el estatus del pedido.
+        
+        console.log("¡Webhook recibido!", { query, body });
+        
+        // Es OBLIGATORIO responder con un status 200 rápido a Mercado Pago
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error("Error en webhook:", error);
+        res.status(500).send('Error');
+    }
+});
+
 // VERCEL SERVERLESS EXPORT
 module.exports = app;
 
