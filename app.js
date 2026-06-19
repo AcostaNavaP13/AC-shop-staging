@@ -1019,7 +1019,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         };
                     });
 
-                    const response = await fetch("https://76355ac2-441f-468c-b32b-bec37422bbfd-00-weavba13bqvj.spock.replit.dev/api/create_preference", {
+                    const response = await fetch("https://ac-shop-staging.vercel.app/create_preference", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ items: mpItems })
