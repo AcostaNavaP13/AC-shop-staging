@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AC Shop - Compra Exitosa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .success-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            text-align: center;
+            padding: 20px;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background-color: #34C759;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 14px rgba(52, 199, 89, 0.4);
+        }
+        .order-id-box {
+            background-color: #F2F2F7;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin: 24px 0;
+            font-weight: 600;
+            font-family: monospace;
+            font-size: 1.2rem;
+            color: #1C1C1E;
+            border: 1px dashed #C7C7CC;
+        }
+        
+        /* Dark mode support */
+        body.dark-mode .order-id-box {
+            background-color: #1C1C1E;
+            color: #F2F2F7;
+            border-color: #3A3A3C;
+        }
+    </style>
+</head>
+<body class="light-mode">
+    <div class="success-container">
+        <div class="success-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h1 style="font-size: 28px; margin-bottom: 12px;">¡Gracias por tu compra!</h1>
+        <p style="color: #8E8E93; max-width: 400px; line-height: 1.5; margin-bottom: 8px;">
+            Hemos recibido tu pedido correctamente.
+            <br><br>
+            <strong>Estatus:</strong> Pendiente por autorizar. Una vez que validemos el pago, nos pondremos en contacto para el envío.
+        </p>
+        
+        <div class="order-id-box" id="order-id-display">
+            Cargando pedido...
+        </div>
+
+        <a href="index.html" class="ios-btn primary-btn" style="text-decoration: none; width: auto; padding: 12px 32px;">Volver a la tienda</a>
+    </div>
+
+    <script>
+        // Aplicar el mismo tema (claro/oscuro) que tenga el usuario en la tienda
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.body.classList.replace('light-mode', 'dark-mode');
+        }
+
+        // Extraer el orderId (external_reference) de la URL que manda Mercado Pago
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('external_reference');
+        
+        if (orderId) {
+            document.getElementById('order-id-display').textContent = 'Pedido: ' + orderId;
+        } else {
+            document.getElementById('order-id-display').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

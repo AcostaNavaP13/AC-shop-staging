@@ -26,9 +26,9 @@ app.post('/create_preference', async (req, res) => {
         const body = {
             items: mpItems,
             back_urls: {
-                success: "http://localhost:5500/index.html", // A donde regresa si paga con éxito
-                failure: "http://localhost:5500/index.html", // A donde regresa si falla
-                pending: "http://localhost:5500/index.html"  // Si va al Oxxo
+                success: "https://acostanavap13.github.io/AC-shop-staging/success.html", 
+                failure: "https://acostanavap13.github.io/AC-shop-staging/index.html", 
+                pending: "https://acostanavap13.github.io/AC-shop-staging/success.html"  
             },
             auto_return: "approved",
             external_reference: req.body.orderId,
