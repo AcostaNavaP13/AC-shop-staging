@@ -4,15 +4,8 @@ const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const app = express();
 
-// Solo aceptar peticiones desde tu tienda (no de sitios desconocidos)
-app.use(cors({
-    origin: [
-        'http://localhost:5500',
-        'http://127.0.0.1:5500',
-        // TODO: Cuando publiques tu tienda, agrega aquí tu dominio real:
-        // 'https://tu-tienda.com'
-    ]
-}));
+// Permitimos CORS de cualquier origen temporalmente para evitar bloqueos
+app.use(cors());
 app.use(express.json());
 
 // Access Token desde variable de entorno de Vercel (NUNCA poner la llave directamente aquí)
