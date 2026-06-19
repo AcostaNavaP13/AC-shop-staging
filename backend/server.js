@@ -15,11 +15,11 @@ app.post('/create_preference', async (req, res) => {
     try {
         const cartItems = req.body.items; // Recibimos el carrito desde app.js
 
-        // Mapeamos los artículos del carrito al formato que pide Mercado Pago
+        // app.js ya nos manda los artículos con 'title', 'quantity' y 'unit_price'
         const mpItems = cartItems.map(item => ({
-            title: item.name + (item.size && item.size !== 'N/A' ? ` (${item.size})` : ''),
+            title: item.title || item.name, // Soporte retroactivo
             quantity: Number(item.quantity),
-            unit_price: Number(item.price),
+            unit_price: Number(item.unit_price || item.price),
             currency_id: 'MXN',
         }));
 

@@ -14,7 +14,7 @@
     <nav class="ios-nav">
         <div class="nav-content">
             <div style="display: flex; align-items: center;">
-                <span id="admin-navbar-title" style="font-weight: 700; font-size: 20px; letter-spacing: -0.5px;">Panel de Admin</span>
+                <span id="admin-navbar-title" style="font-weight: 700; font-size: 20px; letter-spacing: -0.5px;">Panel general</span>
             </div>
             <div style="display: flex; gap: 16px; align-items: center;">
                 <button id="theme-toggle" class="theme-btn ios-btn" style="width: auto; margin: 0; padding: 6px 14px; font-size: 14px; display: inline-flex; align-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Oscuro</button>
@@ -46,7 +46,8 @@
                 <!-- Left Sidebar / Tabs Navigation -->
                 <div class="dashboard-sidebar-left">
                     <button class="tab-btn active" onclick="switchAdminTab('tab-products', this)">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><line x1="12" y1="22" x2="12" y2="15.5"></line><polyline points="22 8.5 12 15.5 2 8.5"></polyline><polyline points="2 15.5 12 8.5 22 15.5"></polyline><line x1="12" y1="2" x2="12" y2="8.5"></line></svg>
+                        <!-- Hand holding box icon -->
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 15H20a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.5"/><path d="M15 15v-3a2 2 0 0 0-2-2H11a2 2 0 0 0-2 2v3"/><path d="M11 6V2"/><path d="M15 6V2"/><path d="M11 2h4"/><path d="M7 6h10"/></svg>
                         Productos
                     </button>
                     <button class="tab-btn" onclick="switchAdminTab('tab-orders', this)">
@@ -58,15 +59,15 @@
                         Configuración
                     </button>
                     <button class="tab-btn" onclick="switchAdminTab('tab-coupons', this)">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path></svg>
                         Cupones
                     </button>
                     <button class="tab-btn" onclick="switchAdminTab('tab-import', this)">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                        Importar Masivo
+                        Importación de datos
                     </button>
                     <button class="tab-btn" onclick="openDeveloperAuth()" style="color: #5856D6;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"></polygon><line x1="12" y1="22" x2="12" y2="15.5"></line><polyline points="22 8.5 12 15.5 2 8.5"></polyline><polyline points="2 15.5 12 8.5 22 15.5"></polyline><line x1="12" y1="2" x2="12" y2="8.5"></line></svg>
                         Desarrollador
                     </button>
                     <button id="logout-btn" class="tab-btn" style="margin-top: auto; color: #FF3B30;">
