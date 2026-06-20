@@ -994,17 +994,26 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // Si hay stock, generar Order ID y registrar en Firebase (descuenta stock temporalmente)
+                // Para Mercado Pago: NO crear pedido aún. Solo guardar el carrito y redirigir.
+                // El pedido se creará en success.html SOLO si Mercado Pago confirma el pago.
                 const paymentMethod = IS_MERCADOPAGO_ENABLED ? 'Mercado Pago' : 'WhatsApp';
-                const { orderId, orderTotal } = await Database.createPendingOrder(cart, appliedCoupon || null, paymentMethod);
-                localStorage.setItem("oa_pending_order_time", Date.now().toString());
 
                 // For Mercado Pago item weight calculation if there's a coupon
                 const currentCartTotal = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
-                let discountAmount = currentCartTotal - orderTotal;
 
                 if (IS_MERCADOPAGO_ENABLED) {
                     // FLUJO DE MERCADO PAGO
+                    // Calcular orderTotal local para descuento de cupón
+                    let orderTotal = currentCartTotal;
+                    if (appliedCoupon) {
+                        if (appliedCoupon.type === 'percentage') {
+                            orderTotal = currentCartTotal * (1 - appliedCoupon.discount / 100);
+                        } else {
+                            orderTotal = Math.max(0, currentCartTotal - appliedCoupon.discount);
+                        }
+                    }
+                    let discountAmount = currentCartTotal - orderTotal;
+
                     const mpItems = cart.map(item => {
                         let subtotal = Number(item.price);
                         if (appliedCoupon && discountAmount > 0) {
@@ -1019,25 +1028,28 @@ document.addEventListener("DOMContentLoaded", () => {
                         };
                     });
 
+                    // Guardar carrito en localStorage para recuperarlo si el usuario no paga
+                    // También guardar el cupón aplicado por si acaso
+                    localStorage.setItem("oa_mp_pending_cart", JSON.stringify(cart));
+                    if (appliedCoupon) localStorage.setItem("oa_mp_pending_coupon", JSON.stringify(appliedCoupon));
+
                     const response = await fetch("https://ac-shop-staging.vercel.app/create_preference", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ items: mpItems, orderId: orderId })
+                        body: JSON.stringify({ items: mpItems, orderId: 'TEMP' })
                     });
 
                     if (!response.ok) {
                         const errorDetail = await response.text();
                         console.error("Error del backend:", errorDetail);
+                        // Si falla, limpiar lo que guardamos
+                        localStorage.removeItem("oa_mp_pending_cart");
+                        localStorage.removeItem("oa_mp_pending_coupon");
                         throw new Error(`Detalle del servidor: ${errorDetail}`);
                     }
 
                     const data = await response.json();
-                    
-                    cart = [];
-                    localStorage.removeItem("oa_cart");
-                    appliedCoupon = null;
-                    localStorage.removeItem("oa_applied_coupon");
-                    
+                    // NO borramos el carrito aquí. Se borrará en success.html si el pago es confirmado.
                     window.location.href = `https://www.mercadopago.com.mx/checkout/v1/redirect?pref_id=${data.id}`;
                 } else {
                     // FLUJO DE WHATSAPP
