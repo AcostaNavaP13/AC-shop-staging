@@ -310,6 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             await renderAdminTable();
             await renderOrdersTable();
+            await renderHistoryTable();
             
             // Limpieza automática en segundo plano
             Database.cleanupOldOrders();
@@ -1147,6 +1148,57 @@ function updateCountdowns() {
         span.innerHTML = `<span style="color:${color};">${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}</span>`;
     });
 }
+
+window.renderHistoryTable = async function() {
+    const listBody = document.getElementById("history-list");
+    if(!listBody) return;
+
+    try {
+        const orders = await Database.getHistoryOrders();
+        listBody.innerHTML = "";
+        
+        if (orders.length === 0) {
+            listBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding: 30px; color: var(--text-secondary);'>No hay historial de ventas recientes.</td></tr>";
+            return;
+        }
+
+        orders.forEach(order => {
+            const tr = document.createElement("tr");
+            const dateStr = order.createdAt ? new Date(order.createdAt.seconds * 1000).toLocaleString() : "Desconocida";
+            
+            let paymentBadge = "";
+            let emailHtml = "";
+            if (order.buyerEmail && order.buyerEmail !== "No proporcionado") {
+                emailHtml = `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; word-break: break-all;" title="Correo del comprador">📧 ${escapeHtml(order.buyerEmail)}</div>`;
+            }
+            if (order.paymentMethod) {
+                const isMp = order.paymentMethod !== 'WhatsApp';
+                paymentBadge = `<div style="margin-top: 4px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-block; background-color: ${isMp ? '#E5F3FF' : '#E5F9E4'}; color: ${isMp ? '#009EE3' : '#34C759'};">${escapeHtml(order.paymentMethod)}</div>`;
+            }
+
+            let itemsHtml = order.items.map(item => `<div style="margin-bottom:2px;">${item.quantity}x ${item.name} <span style="color:var(--text-secondary);font-size:11px;">(${item.size || 'N/A'})</span></div>`).join("");
+
+            let statusHtml = "";
+            if (order.status === "completed") {
+                statusHtml = `<span style="color: var(--apple-green); font-weight: 600; display:flex; align-items:center; gap:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Vendido</span>`;
+            } else if (order.status === "cancelled") {
+                statusHtml = `<span style="color: var(--apple-red); font-weight: 600; display:flex; align-items:center; gap:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Cancelado</span>`;
+            }
+
+            tr.innerHTML = `
+                <td style="font-weight: 600;">${order.id}<br/>${paymentBadge}${emailHtml}</td>
+                <td style="font-size: 13px; color: var(--text-secondary);">${dateStr}</td>
+                <td style="font-size: 13px;">${itemsHtml}</td>
+                <td style="font-weight: 600; color: #000;">$${Number(order.total).toFixed(2)}</td>
+                <td>${statusHtml}</td>
+            `;
+            listBody.appendChild(tr);
+        });
+    } catch(e) {
+        console.error("Error al renderizar historial:", e);
+        listBody.innerHTML = "<tr><td colspan='5' style='text-align:center; padding: 30px; color: var(--apple-red);'>Error cargando historial</td></tr>";
+    }
+};
 
 window.confirmOrderBtn = async function(id, btn) {
     if(!confirm("¿Confirmar este pedido como VENDIDO? (El stock ya está descontado).")) return;

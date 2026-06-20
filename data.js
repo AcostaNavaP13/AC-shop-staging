@@ -358,6 +358,17 @@ class Database {
         return docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     }
 
+    static async getHistoryOrders() {
+        this.requireAdminSession();
+        // Obtenemos todos los pedidos y filtramos localmente para evitar la necesidad de crear
+        // un índice compuesto complejo en Firebase (solo para "completed" y "cancelled").
+        const snapshot = await db.collection("orders").get();
+        const docs = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(order => order.status === "completed" || order.status === "cancelled");
+        return docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    }
+
     static async confirmOrder(orderId) {
         this.requireAdminSession();
         await db.collection("orders").doc(orderId).update({
@@ -462,12 +473,12 @@ class Database {
                 }
             }
 
-            // 2. Eliminar pedidos cancelados o completados que tengan más de 7 días
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            // 2. Eliminar pedidos cancelados que tengan más de 30 días
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             
             const snapshot = await db.collection("orders")
-                .where("createdAt", "<", sevenDaysAgo)
+                .where("createdAt", "<", thirtyDaysAgo)
                 .get();
                 
             const batch = db.batch();
@@ -475,7 +486,7 @@ class Database {
             
             snapshot.forEach(doc => {
                 const order = doc.data();
-                if (order.status === "completed" || order.status === "cancelled") {
+                if (order.status === "cancelled") { // Ya no borramos los "completed" para mantener el historial
                     batch.delete(doc.ref);
                     count++;
                 }
