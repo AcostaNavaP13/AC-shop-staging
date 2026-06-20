@@ -80,6 +80,36 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
+// Endpoint para consultar los detalles del pago (como el correo del comprador)
+app.get('/get_payment_info', async (req, res) => {
+    try {
+        const paymentId = req.query.id;
+        if (!paymentId) {
+            return res.status(400).json({ error: 'Falta el ID de pago' });
+        }
+
+        const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+        const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+            headers: {
+                Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('No se pudo obtener información del pago');
+        }
+
+        const data = await response.json();
+        res.json({
+            email: data.payer?.email || 'No proporcionado'
+        });
+
+    } catch (error) {
+        console.error("Error al obtener info del pago:", error);
+        res.status(500).json({ error: 'Error interno', detail: error.message });
+    }
+});
+
 // VERCEL SERVERLESS EXPORT
 module.exports = app;
 

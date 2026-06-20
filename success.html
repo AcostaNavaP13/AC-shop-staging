@@ -80,56 +80,78 @@
         // Extraer parámetros de la URL que manda Mercado Pago
         const urlParams = new URLSearchParams(window.location.search);
         const paymentStatus = urlParams.get('collection_status'); // 'approved', 'pending', etc.
+        const paymentType = urlParams.get('payment_type');
+        const paymentId = urlParams.get('payment_id');
+
+        let formattedPaymentType = "Mercado Pago";
+        if (paymentType === 'ticket') formattedPaymentType = "Efectivo (OXXO/PayCash)";
+        else if (paymentType === 'credit_card') formattedPaymentType = "Tarjeta de Crédito";
+        else if (paymentType === 'debit_card') formattedPaymentType = "Tarjeta de Débito";
+        else if (paymentType === 'account_money') formattedPaymentType = "Saldo Mercado Pago";
         
-        // ✅ CASO 1: El usuario SÍ pagó (Mercado Pago nos redirigió con confirmación)
-        if (paymentStatus === 'approved' || paymentStatus === 'pending') {
-            // Recuperar carrito guardado antes de ir a MP
-            const pendingCart = JSON.parse(localStorage.getItem('oa_mp_pending_cart') || '[]');
-            const pendingCoupon = JSON.parse(localStorage.getItem('oa_mp_pending_coupon') || 'null');
+        // Ejecutar flujo asíncrono para poder hacer fetch del correo
+        (async () => {
+            // ✅ CASO 1: El usuario SÍ pagó (Mercado Pago nos redirigió con confirmación)
+            if (paymentStatus === 'approved' || paymentStatus === 'pending') {
+                // Recuperar carrito guardado antes de ir a MP
+                const pendingCart = JSON.parse(localStorage.getItem('oa_mp_pending_cart') || '[]');
+                const pendingCoupon = JSON.parse(localStorage.getItem('oa_mp_pending_coupon') || 'null');
 
-            if (pendingCart.length > 0) {
-                // Crear el pedido en Firebase AHORA que sabemos que pagó
-                Database.createPendingOrder(pendingCart, pendingCoupon, 'Mercado Pago')
-                    .then(({ orderId }) => {
-                        document.getElementById('order-id-display').textContent = 'Pedido: ' + orderId;
-                    })
-                    .catch(err => {
-                        console.error('Error al registrar pedido:', err);
-                        document.getElementById('order-id-display').textContent = 'Revisa tu correo para el número de pedido.';
-                    });
-            }
+                if (pendingCart.length > 0) {
+                    let buyerEmail = "No proporcionado";
+                    if (paymentId && paymentId !== "null") {
+                        try {
+                            const res = await fetch(`https://ac-shop-staging.vercel.app/get_payment_info?id=${paymentId}`);
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data.email) buyerEmail = data.email;
+                            }
+                        } catch(e) { console.error("Error obteniendo correo:", e); }
+                    }
 
-            // Limpiar carrito y datos temporales
-            localStorage.removeItem('oa_cart');
-            localStorage.removeItem('oa_applied_coupon');
-            localStorage.removeItem('oa_mp_pending_cart');
-            localStorage.removeItem('oa_mp_pending_coupon');
+                    // Crear el pedido en Firebase AHORA que sabemos que pagó
+                    Database.createPendingOrder(pendingCart, pendingCoupon, formattedPaymentType, buyerEmail)
+                        .then(({ orderId }) => {
+                            document.getElementById('order-id-display').textContent = 'Pedido: ' + orderId;
+                        })
+                        .catch(err => {
+                            console.error('Error al registrar pedido:', err);
+                            document.getElementById('order-id-display').textContent = 'Revisa tu correo para el número de pedido.';
+                        });
+                }
 
-            if (paymentStatus === 'pending') {
-                document.querySelector('p').innerHTML = `
-                    Hemos recibido tu pedido correctamente.<br><br>
-                    <strong>Estatus:</strong> Pago pendiente de acreditación (ej. OXXO). 
-                    Una vez confirmado, nos pondremos en contacto para coordinar el envío.
-                `;
-            }
-
-        } else {
-            // ❌ CASO 2: El usuario NO pagó (regresó sin pagar, o llegó directo a esta URL)
-            // Restaurar el carrito que guardamos antes de ir a MP
-            const pendingCart = localStorage.getItem('oa_mp_pending_cart');
-            if (pendingCart) {
-                localStorage.setItem('oa_cart', pendingCart);
+                // Limpiar carrito y datos temporales
+                localStorage.removeItem('oa_cart');
+                localStorage.removeItem('oa_applied_coupon');
                 localStorage.removeItem('oa_mp_pending_cart');
-            }
-            const pendingCoupon = localStorage.getItem('oa_mp_pending_coupon');
-            if (pendingCoupon) {
-                localStorage.setItem('oa_applied_coupon', pendingCoupon);
                 localStorage.removeItem('oa_mp_pending_coupon');
-            }
 
-            // Redirigir al usuario a la tienda con su carrito intacto
-            window.location.href = 'index.html';
-        }
+                if (paymentStatus === 'pending') {
+                    document.querySelector('p').innerHTML = `
+                        Hemos recibido tu pedido correctamente.<br><br>
+                        <strong>Estatus:</strong> Pago pendiente de acreditación (ej. OXXO). 
+                        Una vez confirmado, nos pondremos en contacto para coordinar el envío.
+                    `;
+                }
+
+            } else {
+                // ❌ CASO 2: El usuario NO pagó (regresó sin pagar, o llegó directo a esta URL)
+                // Restaurar el carrito que guardamos antes de ir a MP
+                const pendingCart = localStorage.getItem('oa_mp_pending_cart');
+                if (pendingCart) {
+                    localStorage.setItem('oa_cart', pendingCart);
+                    localStorage.removeItem('oa_mp_pending_cart');
+                }
+                const pendingCoupon = localStorage.getItem('oa_mp_pending_coupon');
+                if (pendingCoupon) {
+                    localStorage.setItem('oa_applied_coupon', pendingCoupon);
+                    localStorage.removeItem('oa_mp_pending_coupon');
+                }
+
+                // Redirigir al usuario a la tienda con su carrito intacto
+                window.location.href = 'index.html';
+            }
+        })();
     </script>
 </body>
 </html>

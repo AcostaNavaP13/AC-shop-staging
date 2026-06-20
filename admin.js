@@ -1063,15 +1063,21 @@ window.renderOrdersTable = async function() {
             }
 
             let paymentBadge = "";
+            let emailHtml = "";
+
+            if (order.buyerEmail && order.buyerEmail !== "No proporcionado") {
+                emailHtml = `<div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; word-break: break-all;" title="Correo del comprador">📧 ${escapeHtml(order.buyerEmail)}</div>`;
+            }
+
             if (order.paymentMethod) {
-                const isMp = order.paymentMethod === 'Mercado Pago';
+                const isMp = order.paymentMethod !== 'WhatsApp';
                 paymentBadge = `<div style="margin-top: 4px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-block; background-color: ${isMp ? '#E5F3FF' : '#E5F9E4'}; color: ${isMp ? '#009EE3' : '#34C759'};">${escapeHtml(order.paymentMethod)}</div>`;
             }
 
             let itemsHtml = order.items.map(item => `<div>${item.quantity}x ${item.name} (${item.size})</div>`).join("");
 
             tr.innerHTML = `
-                <td style="font-weight: 600;">${order.id}<br/>${paymentBadge}</td>
+                <td style="font-weight: 600;">${order.id}<br/>${paymentBadge}${emailHtml}</td>
                 <td style="font-size: 13px;">${dateStr}${commitHtml}</td>
                 <td style="font-size: 13px;">${itemsHtml}</td>
                 <td style="font-weight: 600;">$${Number(order.total).toFixed(2)}</td>
