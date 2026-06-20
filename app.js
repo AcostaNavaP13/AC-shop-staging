@@ -4,6 +4,8 @@ let IS_DISCOUNTS_ENABLED = true;
 let IS_COUPONS_ENABLED = false;
 let IS_RELATED_ENABLED = true;
 let IS_MERCADOPAGO_ENABLED = false;
+let MP_INSTALLMENTS = 12;
+let MP_ALLOW_CASH = true;
 let appliedCoupon = null;
 let userIpAddress = "unknown";
 let allProducts = [];
@@ -114,6 +116,8 @@ async function renderCatalog() {
         IS_COUPONS_ENABLED = settings.couponsEnabled !== false;
         IS_RELATED_ENABLED = settings.relatedEnabled !== false;
         IS_MERCADOPAGO_ENABLED = settings.mercadopagoEnabled === true;
+        MP_INSTALLMENTS = settings.mpInstallments || 12;
+        MP_ALLOW_CASH = settings.mpAllowCash !== false;
 
         // Fetch IP if coupons are enabled
         if (IS_COUPONS_ENABLED && userIpAddress === "unknown") {
@@ -1036,7 +1040,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     const response = await fetch("https://ac-shop-staging.vercel.app/create_preference", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ items: mpItems, orderId: 'TEMP' })
+                        body: JSON.stringify({ 
+                            items: mpItems, 
+                            orderId: 'TEMP',
+                            installments: MP_INSTALLMENTS,
+                            allowCash: MP_ALLOW_CASH
+                        })
                     });
 
                     if (!response.ok) {

@@ -232,6 +232,20 @@ document.addEventListener("DOMContentLoaded", () => {
             if (announceEnabledInput) announceEnabledInput.checked = settings.announcementEnabled === true;
             if (announceTextInput) announceTextInput.value = settings.announcementText || "";
 
+            const mpConfigModule = document.getElementById("mp-config-module");
+            const mpInstallments = document.getElementById("mp-installments");
+            const mpAllowCash = document.getElementById("mp-allow-cash");
+            
+            if (mpConfigModule) {
+                mpConfigModule.style.display = settings.mercadopagoEnabled ? "block" : "none";
+            }
+            if (mpInstallments) {
+                mpInstallments.value = settings.mpInstallments ? String(settings.mpInstallments) : "12";
+            }
+            if (mpAllowCash) {
+                mpAllowCash.checked = settings.mpAllowCash !== false; // defaults to true
+            }
+
             if(settings.logoUrl) {
                 localStorage.setItem("oa_logo", settings.logoUrl);
                 const favicon = document.getElementById("favicon");
@@ -341,6 +355,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const announcementEnabled = document.getElementById("announcement-enabled") ? document.getElementById("announcement-enabled").checked : false;
                 const announcementText = document.getElementById("announcement-text") ? document.getElementById("announcement-text").value : "";
+                const mpInstallments = document.getElementById("mp-installments") ? parseInt(document.getElementById("mp-installments").value) : 12;
+                const mpAllowCash = document.getElementById("mp-allow-cash") ? document.getElementById("mp-allow-cash").checked : true;
 
                 await Database.saveSettings({ 
                     whatsapp: newWhatsapp, 
@@ -350,6 +366,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     orderExpirationHours: orderExpiration,
                     announcementEnabled,
                     announcementText,
+                    mpInstallments,
+                    mpAllowCash,
                     ...(logoUrl && { logoUrl })
                 });
 

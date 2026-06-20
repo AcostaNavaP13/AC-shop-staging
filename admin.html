@@ -211,6 +211,35 @@
                                     <input type="text" id="announcement-text" class="ios-input" placeholder="Ej. Aprovecha 3 y 6 MSI en tus compras. Consulta TyC." style="margin-bottom: 24px;" />
                                 </div>
 
+                                <div id="mp-config-module" style="display: none; border-top: 1px solid var(--border-color); margin: 24px 0; padding-top: 24px;">
+                                    <h3 style="font-size: 16px; margin-bottom: 12px; color: #009EE3; display: flex; align-items: center; gap: 8px;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                                        Configuración Mercado Pago
+                                    </h3>
+                                    
+                                    <label for="mp-installments" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Límite de Meses (MSI):</label>
+                                    <select id="mp-installments" class="ios-select" style="width: 100%; margin-bottom: 16px; padding: 14px;">
+                                        <option value="1">1 Mes (De contado)</option>
+                                        <option value="3">Hasta 3 meses</option>
+                                        <option value="6">Hasta 6 meses</option>
+                                        <option value="9">Hasta 9 meses</option>
+                                        <option value="12">Hasta 12 meses</option>
+                                        <option value="18">Hasta 18 meses</option>
+                                        <option value="24">Hasta 24 meses</option>
+                                    </select>
+                                    
+                                    <div class="ios-switch-container" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 12px; background: #f8f8f8; border-radius: 12px; border: 1px solid #E5E5EA;">
+                                        <div style="display: flex; flex-direction: column;">
+                                            <label class="ios-switch-label" style="font-weight: 600; font-size: 15px; margin: 0;">Permitir pagos en efectivo (OXXO)</label>
+                                            <span style="font-size: 12px; color: var(--text-secondary);">Si se desactiva, solo se aceptarán tarjetas.</span>
+                                        </div>
+                                        <label class="ios-switch">
+                                            <input type="checkbox" id="mp-allow-cash" aria-label="Permitir OXXO" title="Permitir OXXO" />
+                                            <span class="ios-slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <button type="submit" class="ios-btn primary-btn" style="background-color: var(--apple-green);">Guardar Configuración General</button>
                             </form>
                         </div>

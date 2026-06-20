@@ -32,7 +32,16 @@ app.post('/create_preference', async (req, res) => {
             },
             auto_return: "approved",
             external_reference: req.body.orderId,
-            notification_url: "https://ac-shop-staging.vercel.app/webhook"
+            notification_url: "https://ac-shop-staging.vercel.app/webhook",
+            
+            // CONFIGURACIÓN DE PAGOS Y MESES (Dinámica desde el admin)
+            payment_methods: {
+                installments: req.body.installments || 12, 
+                // Si allowCash es false, bloqueamos pagos offline (OXXO, etc.)
+                ...(req.body.allowCash === false && {
+                    excluded_payment_types: [{ id: "ticket" }, { id: "atm" }]
+                })
+            }
         };
 
         const preference = new Preference(client);
