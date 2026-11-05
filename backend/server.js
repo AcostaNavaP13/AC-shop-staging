@@ -4,40 +4,71 @@ const { MercadoPagoConfig, Preference } = require('mercadopago');
 
 const app = express();
 
-// Permitimos CORS de cualquier origen temporalmente para evitar bloqueos
-app.use(cors());
-app.use(express.json());
+// Configuración de CORS con soporte para dominios autorizados y variables de entorno
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) 
+    : ['https://acostanavap13.github.io', 'http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:5500'];
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Permitir solicitudes sin origen (mobile apps, server-to-server) o si está en lista blanca
+        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Bloqueado por política CORS'));
+        }
+    },
+    credentials: true
+}));
+
+app.use(express.json({ limit: '500kb' }));
 
 // Access Token desde variable de entorno de Vercel (NUNCA poner la llave directamente aquí)
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
 
 app.post('/create_preference', async (req, res) => {
     try {
-        const cartItems = req.body.items; // Recibimos el carrito desde app.js
+        const cartItems = req.body.items;
+        if (!Array.isArray(cartItems) || cartItems.length === 0) {
+            return res.status(400).json({ error: 'El carrito no contiene artículos válidos' });
+        }
 
-        // app.js ya nos manda los artículos con 'title', 'quantity' y 'unit_price'
-        const mpItems = cartItems.map(item => ({
-            title: item.title || item.name, // Soporte retroactivo
-            quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price || item.price),
-            currency_id: 'MXN',
-        }));
+        const mpItems = cartItems.map(item => {
+            const quantity = parseInt(item.quantity, 10);
+            const unit_price = parseFloat(item.unit_price || item.price);
+
+            if (isNaN(quantity) || quantity <= 0) {
+                throw new Error(`Cantidad inválida para el artículo: ${item.title || item.name || 'desconocido'}`);
+            }
+            if (isNaN(unit_price) || unit_price <= 0) {
+                throw new Error(`Precio inválido para el artículo: ${item.title || item.name || 'desconocido'}`);
+            }
+
+            return {
+                title: String(item.title || item.name || 'Artículo').substring(0, 100),
+                quantity,
+                unit_price,
+                currency_id: 'MXN',
+            };
+        });
+
+        const storeFrontUrl = process.env.FRONTEND_URL || "https://acostanavap13.github.io/AC-shop-staging";
+        const webhookUrl = process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/webhook` : "https://ac-shop-staging.vercel.app/webhook";
+
+        const installments = Math.min(Math.max(parseInt(req.body.installments, 10) || 12, 1), 24);
 
         const body = {
             items: mpItems,
             back_urls: {
-                success: "https://acostanavap13.github.io/AC-shop-staging/success.html", 
-                failure: "https://acostanavap13.github.io/AC-shop-staging/index.html", 
-                pending: "https://acostanavap13.github.io/AC-shop-staging/success.html"  
+                success: `${storeFrontUrl}/success.html`, 
+                failure: `${storeFrontUrl}/index.html`, 
+                pending: `${storeFrontUrl}/success.html`  
             },
             auto_return: "approved",
-            external_reference: req.body.orderId,
-            notification_url: "https://ac-shop-staging.vercel.app/webhook",
-            
-            // CONFIGURACIÓN DE PAGOS Y MESES (Dinámica desde el admin)
+            external_reference: String(req.body.orderId || ('ORD-' + Date.now())).substring(0, 50),
+            notification_url: webhookUrl,
             payment_methods: {
-                installments: req.body.installments || 12, 
-                // Si allowCash es false, bloqueamos pagos offline (OXXO, etc.)
+                installments: installments, 
                 ...(req.body.allowCash === false && {
                     excluded_payment_types: [{ id: "ticket" }, { id: "atm" }]
                 })
@@ -55,24 +86,20 @@ app.post('/create_preference', async (req, res) => {
         console.error("Error al crear preferencia:", error);
         res.status(500).json({ 
             error: 'Error al crear la preferencia de Mercado Pago',
-            detail: error.message || JSON.stringify(error)
+            detail: error.message || 'Error en procesamiento'
         });
     }
 });
 
-// NUEVO: Endpoint para recibir Webhooks de Mercado Pago
+// Endpoint para recibir Webhooks de Mercado Pago
 app.post('/webhook', async (req, res) => {
     try {
         const query = req.query;
         const body = req.body;
         
-        // Mercado Pago nos avisa por aquí cuando un pago cambia de estado.
-        // Por ahora solo le decimos "Recibido, gracias" para que no nos marque error.
-        // En el futuro, aquí conectaremos con Firebase para actualizar el estatus del pedido.
-        
         console.log("¡Webhook recibido!", { query, body });
         
-        // Es OBLIGATORIO responder con un status 200 rápido a Mercado Pago
+        // Responder con status 200 rápido a Mercado Pago
         res.status(200).send('OK');
     } catch (error) {
         console.error("Error en webhook:", error);
@@ -84,19 +111,19 @@ app.post('/webhook', async (req, res) => {
 app.get('/get_payment_info', async (req, res) => {
     try {
         const paymentId = req.query.id;
-        if (!paymentId) {
-            return res.status(400).json({ error: 'Falta el ID de pago' });
+        if (!paymentId || !/^[0-9]+$/.test(String(paymentId).trim())) {
+            return res.status(400).json({ error: 'ID de pago inválido o no proporcionado' });
         }
 
-        const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-        const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        const fetchFn = typeof fetch !== 'undefined' ? fetch : (...args) => import('node-fetch').then(({default: f}) => f(...args));
+        const response = await fetchFn(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
             headers: {
                 Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`
             }
         });
 
         if (!response.ok) {
-            throw new Error('No se pudo obtener información del pago');
+            throw new Error('No se pudo obtener información del pago desde Mercado Pago');
         }
 
         const data = await response.json();
@@ -106,7 +133,7 @@ app.get('/get_payment_info', async (req, res) => {
 
     } catch (error) {
         console.error("Error al obtener info del pago:", error);
-        res.status(500).json({ error: 'Error interno', detail: error.message });
+        res.status(500).json({ error: 'Error interno al consultar el pago', detail: error.message });
     }
 });
 

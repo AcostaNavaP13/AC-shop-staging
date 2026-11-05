@@ -201,12 +201,12 @@
                     <span id="cart-total">$0.00</span>
                 </h3>
                 <div class="checkout-buttons-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
-                    <button id="checkout-mp-btn" class="ios-btn" style="background-color: #009EE3; color: white; display: flex; align-items: center; justify-content: center; padding: 13px 16px; font-weight: 600; font-size: 14px; border-radius: 12px; margin: 0; box-shadow: 0 2px 8px rgba(0, 158, 227, 0.25);">
+                    <button id="checkout-mp-btn" onclick="executeCheckout('mercadopago')" class="ios-btn" style="background-color: #009EE3; color: white; display: flex; align-items: center; justify-content: center; padding: 13px 16px; font-weight: 600; font-size: 14px; border-radius: 12px; margin: 0; box-shadow: 0 2px 8px rgba(0, 158, 227, 0.25);">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; flex-shrink: 0;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
                         <span>Pagar con Mercado Pago</span>
                     </button>
                     
-                    <button id="checkout-wa-btn" class="ios-btn" style="background-color: var(--apple-green); color: white; display: flex; align-items: center; justify-content: center; padding: 13px 16px; font-weight: 600; font-size: 14px; border-radius: 12px; margin: 0; box-shadow: 0 2px 8px rgba(52, 199, 89, 0.25);">
+                    <button id="checkout-wa-btn" onclick="executeCheckout('whatsapp')" class="ios-btn" style="background-color: var(--apple-green); color: white; display: flex; align-items: center; justify-content: center; padding: 13px 16px; font-weight: 600; font-size: 14px; border-radius: 12px; margin: 0; box-shadow: 0 2px 8px rgba(52, 199, 89, 0.25);">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; flex-shrink: 0;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
                         <span>Reservar stock (Pago contra entrega)</span>
                     </button>
@@ -219,7 +219,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script src="theme.js"></script>
-    <script src="data.js"></script>
-    <script src="app.js"></script>
+    <script src="data.js?v=2.3"></script>
+    <script src="app.js?v=2.3"></script>
 </body>
 </html>

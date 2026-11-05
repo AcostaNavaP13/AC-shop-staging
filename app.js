@@ -1131,7 +1131,10 @@ window.executeCheckout = async function(method = 'whatsapp') {
             
             document.getElementById("cart-modal").style.display = "none";
             document.body.style.overflow = '';
-            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+            
+            const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+            // Usar window.location.href para evitar que bloqueadores de popups bloqueen WhatsApp tras un await
+            window.location.href = waUrl;
             
             if (activeBtn) {
                 activeBtn.innerHTML = oldHtml;
@@ -1149,4 +1152,3 @@ window.executeCheckout = async function(method = 'whatsapp') {
         if (otherBtn) otherBtn.disabled = false;
     }
 };
-});
