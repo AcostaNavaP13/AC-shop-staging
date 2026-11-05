@@ -1004,6 +1004,8 @@ async function renderAdminTable() {
             const tr = document.createElement("tr");
             const firstImage = (p.imageUrls && p.imageUrls[0]) || p.imageUrl || "https://via.placeholder.com/50?text=IMG";
             const productName = escapeHtml(p.name);
+            const productId = escapeJs(p.id);
+            const modalName = escapeJs(p.name);
             
             let stockHtml = "";
             let metaText = `${escapeHtml(p.category || "N/A")} • ${escapeHtml(p.brand || "N/A")}`;
@@ -1020,9 +1022,6 @@ async function renderAdminTable() {
                 stockHtml = `<div style="font-weight:600;">Total: ${p.quantity || 0}</div>`;
                 stockEditor = `<input type="number" value="${Number(p.quantity || 0)}" class="ios-input" style="width:70px; margin:0; padding:8px" id="stock-${p.id}" aria-label="Stock de ${productName}" title="Stock de ${productName}" />`;
             }
-
-            const productId = escapeJs(p.id);
-            const modalName = escapeJs(p.name);
 
             tr.innerHTML = `
                 <td><img src="${escapeHtml(firstImage)}" alt="${productName}" class="table-img" onerror="this.src='https://via.placeholder.com/50?text=IMG'"/></td>
@@ -1050,8 +1049,8 @@ async function renderAdminTable() {
             listBody.appendChild(tr);
         });
     } catch(err) {
-        listBody.innerHTML = "<tr><td colspan='6' style='color:red;'>Error al cargar datos. Verifica los permisos de Firestore.</td></tr>";
-        console.error(err);
+        console.error("Error al renderizar productos:", err);
+        listBody.innerHTML = `<tr><td colspan='6' style='color:red; text-align:center; padding:20px;'>Error al cargar datos: ${escapeHtml(err.message || 'Verifica los permisos de Firestore')}</td></tr>`;
     }
 }
 

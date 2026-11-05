@@ -441,21 +441,26 @@ window.openProductModal = function(id) {
     renderModalCarousel();
 
     const actionContainer = document.getElementById('product-modal-action-container');
-    const isOutOfStock = Number(product.quantity) <= 0;
+    const hasSizes = product.sizes && product.sizes.length > 0;
+    const totalStock = hasSizes 
+        ? product.sizes.reduce((acc, s) => acc + (Number(s.qty) || 0), 0)
+        : Number(product.quantity || 0);
+    const isOutOfStock = totalStock <= 0;
     
-    if (isOutOfStock) {
+    let productSizes = [];
+    if (hasSizes) {
+        productSizes = product.sizes.filter(s => (Number(s.qty) || 0) > 0).map(s => s.name.trim());
+    } else {
+        productSizes = product.size && product.size !== "Unitalla"
+            ? product.size.split(/[,-\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean)
+            : ["Unitalla"];
+    }
+
+    if (isOutOfStock || (hasSizes && productSizes.length === 0)) {
         actionContainer.innerHTML = `
-            <button class="ios-btn disabled" style="background:#E5E5EA; color:#8E8E93; width: 100%;" disabled>Agotado</button>
+            <button class="ios-btn disabled" style="background:#E5E5EA; color:#8E8E93; width: 100%; cursor:not-allowed;" disabled>Agotado</button>
         `;
     } else {
-        let productSizes = [];
-        if (product.sizes && product.sizes.length > 0) {
-            productSizes = product.sizes.filter(s => s.qty > 0).map(s => s.name.trim());
-        } else {
-            productSizes = product.size && product.size !== "Unitalla"
-                ? product.size.split(/[,-\s]+/).map(s => s.trim().toUpperCase()).filter(Boolean)
-                : ["Unitalla"];
-        }
 
         actionContainer.innerHTML = `
             <div style="margin-bottom: 12px; font-weight: 600; font-size: 15px; color: var(--text-primary);">Selecciona Variante:</div>
@@ -606,14 +611,24 @@ window.addToCartModal = function(id, name, price, img, size, event) {
     // Validar stock en tiempo real
     const product = allProducts.find(p => p.id === id);
     if (product) {
-        const cartQty = cart.filter(c => c.id === id && c.size === size).reduce((s, c) => s + c.quantity, 0);
+        const cartQty = cart.filter(c => c.id === id && (c.size || '').trim() === (size || '').trim()).reduce((s, c) => s + c.quantity, 0);
         if (product.sizes && product.sizes.length > 0) {
-            const sizeObj = product.sizes.find(s => s.name.trim() === size);
-            if (sizeObj && cartQty >= sizeObj.qty) {
-                return alert(`No hay más stock disponible de variante ${size} para este artículo.`);
+            const sizeObj = product.sizes.find(s => s.name.trim() === (size || '').trim());
+            const available = sizeObj ? Number(sizeObj.qty || 0) : 0;
+            if (available <= 0) {
+                return alert(`La variante ${size} está agotada.`);
             }
-        } else if (cartQty >= product.quantity) {
-            return alert("No hay más stock disponible para este artículo.");
+            if (cartQty + 1 > available) {
+                return alert(`Solo hay ${available} unidad(es) disponible(s) de la variante ${size}. No puedes agregar más.`);
+            }
+        } else {
+            const available = Number(product.quantity || 0);
+            if (available <= 0) {
+                return alert("Este artículo se encuentra agotado.");
+            }
+            if (cartQty + 1 > available) {
+                return alert(`Solo hay ${available} unidad(es) disponible(s) de este artículo. No puedes agregar más.`);
+            }
         }
     }
     
@@ -752,14 +767,18 @@ window.addToCart = function(id, name, price, img, event) {
     const size = sizeEl ? sizeEl.value : "Unitalla";
 
     if (product) {
-        const cartQty = cart.filter(c => c.id === id && c.size === size).reduce((s, c) => s + c.quantity, 0);
+        const cartQty = cart.filter(c => c.id === id && (c.size || '').trim() === (size || '').trim()).reduce((s, c) => s + c.quantity, 0);
         if (product.sizes && product.sizes.length > 0) {
-            const sizeObj = product.sizes.find(s => s.name.trim() === size);
-            if (sizeObj && cartQty >= sizeObj.qty) {
-                return alert(`No hay más stock disponible de variante ${size} para este artículo.`);
+            const sizeObj = product.sizes.find(s => s.name.trim() === (size || '').trim());
+            const available = sizeObj ? Number(sizeObj.qty || 0) : 0;
+            if (available <= 0 || cartQty + 1 > available) {
+                return alert(`Solo hay ${available} unidad(es) disponible(s) de la variante ${size}.`);
             }
-        } else if (cartQty >= (product.quantity || 0)) {
-            return alert("No hay más stock disponible para este artículo.");
+        } else {
+            const available = Number(product.quantity || 0);
+            if (available <= 0 || cartQty + 1 > available) {
+                return alert(`Solo hay ${available} unidad(es) disponible(s) de este artículo.`);
+            }
         }
     }
 
@@ -942,8 +961,30 @@ window.applyCoupon = async function() {
 };
 
 window.changeCartQty = function(index, delta) {
-    cart[index].quantity += delta;
-    if(cart[index].quantity <= 0) {
+    if (!cart[index]) return;
+    const item = cart[index];
+
+    if (delta > 0) {
+        // Validar stock antes de incrementar
+        const product = allProducts.find(p => p.id === item.id);
+        if (product) {
+            if (product.sizes && product.sizes.length > 0) {
+                const sizeObj = product.sizes.find(s => s.name.trim() === (item.size || '').trim());
+                const available = sizeObj ? Number(sizeObj.qty || 0) : 0;
+                if (item.quantity + delta > available) {
+                    return alert(`Solo hay ${available} unidad(es) disponible(s) de la variante ${item.size}. No puedes agregar más.`);
+                }
+            } else {
+                const available = Number(product.quantity || 0);
+                if (item.quantity + delta > available) {
+                    return alert(`Solo hay ${available} unidad(es) disponible(s) de este artículo. No puedes agregar más.`);
+                }
+            }
+        }
+    }
+
+    item.quantity += delta;
+    if (item.quantity <= 0) {
         cart.splice(index, 1);
     }
     saveCart();
@@ -998,9 +1039,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+let isCheckingOut = false;
 window.executeCheckout = async function(method = 'whatsapp') {
+    if (isCheckingOut) return;
     if (cart.length === 0) return alert("Tu carrito está vacío");
 
+    isCheckingOut = true;
     const isMp = method === 'mercadopago';
     const activeBtn = isMp ? document.getElementById("checkout-mp-btn") : document.getElementById("checkout-wa-btn");
     const otherBtn = isMp ? document.getElementById("checkout-wa-btn") : document.getElementById("checkout-mp-btn");
@@ -1010,6 +1054,7 @@ window.executeCheckout = async function(method = 'whatsapp') {
         if (localStorage.getItem("oa_pending_order_time")) {
             const timeStr = localStorage.getItem("oa_pending_order_time");
             if (Date.now() - Number(timeStr) < 2 * 60 * 1000) { // 2 minutes cooldown
+                isCheckingOut = false;
                 return alert("El sistema está procesando tu pedido anterior. Por favor espera 2 minutos antes de hacer un nuevo pedido para evitar duplicados.");
             }
         }
@@ -1027,13 +1072,14 @@ window.executeCheckout = async function(method = 'whatsapp') {
             const productDb = await Database.getProduct(item.id);
             if (!productDb) throw new Error(`El producto ${item.name} ya no existe en el catálogo.`);
 
-            if (item.size && item.size !== 'N/A') {
-                const variant = (productDb.sizes || []).find(s => s.name === item.size);
-                if (!variant || variant.qty < item.quantity) {
+            const hasSizes = productDb.sizes && productDb.sizes.length > 0;
+            if (hasSizes && item.size && item.size !== 'Unitalla' && item.size !== 'N/A') {
+                const variant = productDb.sizes.find(s => (s.name || '').trim().toLowerCase() === (item.size || '').trim().toLowerCase());
+                if (!variant || Number(variant.qty || 0) < item.quantity) {
                     throw new Error(`Stock insuficiente para ${item.name} (Talla: ${item.size}). Disponible: ${variant ? variant.qty : 0}`);
                 }
             } else {
-                if ((productDb.quantity || 0) < item.quantity) {
+                if (Number(productDb.quantity || 0) < item.quantity) {
                     throw new Error(`Stock insuficiente para ${item.name}. Disponible: ${productDb.quantity || 0}`);
                 }
             }
@@ -1150,5 +1196,7 @@ window.executeCheckout = async function(method = 'whatsapp') {
             activeBtn.disabled = false;
         }
         if (otherBtn) otherBtn.disabled = false;
+    } finally {
+        isCheckingOut = false;
     }
 };

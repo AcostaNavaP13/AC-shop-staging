@@ -334,8 +334,8 @@ class Database {
                 let newSizes = p.sizes ? [...p.sizes] : [];
                 let newQuantity = p.quantity;
                 
-                if (p.sizes && p.sizes.length > 0) {
-                    const sizeIndex = newSizes.findIndex(s => s.name === item.size);
+                if (p.sizes && p.sizes.length > 0 && item.size && item.size !== 'Unitalla' && item.size !== 'N/A') {
+                    const sizeIndex = newSizes.findIndex(s => (s.name || '').trim().toLowerCase() === (item.size || '').trim().toLowerCase());
                     if (sizeIndex === -1 || newSizes[sizeIndex].qty < item.quantity) {
                         throw new Error(`No hay suficiente stock de la talla ${item.size} para ${item.name}.`);
                     }
