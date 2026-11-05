@@ -22,7 +22,7 @@ class Database {
     }
 
     static sanitizeProduct(product) {
-        return {
+        const sanitized = {
             name: String(product.name || "").trim(),
             price: Number(product.price),
             discountEnabled: Boolean(product.discountEnabled),
@@ -34,6 +34,9 @@ class Database {
             size: String(product.size || "Unitalla").trim(),
             sizes: Array.isArray(product.sizes) ? product.sizes : [],
         };
+        if (product.sku !== undefined) sanitized.sku = String(product.sku || "").toUpperCase().trim();
+        if (Array.isArray(product.relatedSkus)) sanitized.relatedSkus = product.relatedSkus.map(s => String(s).toUpperCase().trim()).filter(Boolean);
+        return sanitized;
     }
 
     static async getSettings() {
@@ -93,7 +96,7 @@ class Database {
     }
 
     // ==========================================
-    // CUPOES
+    // CUPONES
     // ==========================================
     static async getCoupons() {
         const snap = await db.collection("coupons").orderBy("createdAt", "desc").get();
@@ -206,6 +209,22 @@ class Database {
         return docRef.id;
     }
 
+    static async uploadProductImage(dataUrl, productId = "general") {
+        this.requireAdminSession();
+        if (!storage) {
+            throw new Error("Firebase Storage no está cargado. Revisa los scripts de Firebase.");
+        }
+        const path = `products/${productId}/${Date.now()}-${Math.floor(Math.random() * 10000)}.jpg`;
+        const ref = storage.ref().child(path);
+        await ref.putString(dataUrl, "data_url", {
+            contentType: "image/jpeg",
+            customMetadata: {
+                uploadedBy: auth.currentUser ? auth.currentUser.uid : "admin",
+            },
+        });
+        return ref.getDownloadURL();
+    }
+
     static async uploadProductImages(productId, imageDataUrls) {
         this.requireAdminSession();
         if (!storage) {
@@ -285,8 +304,11 @@ class Database {
     // --- ORDERS MANAGEMENT ---
 
     static async createPendingOrder(cartItems, coupon = null, paymentMethod = 'WhatsApp', buyerEmail = null) {
-        // Generamos un ID de pedido más seguro y casi irrepetible
-        const orderId = "PED-" + Date.now().toString(36).toUpperCase() + Math.floor(Math.random() * 1000);
+        // Generamos un ID de pedido seguro y no colisionable
+        const randomSuffix = (typeof crypto !== 'undefined' && crypto.getRandomValues)
+            ? Array.from(crypto.getRandomValues(new Uint8Array(3))).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase()
+            : Math.random().toString(36).substring(2, 8).toUpperCase();
+        const orderId = "PED-" + Date.now().toString(36).toUpperCase() + "-" + randomSuffix;
         let total = cartItems.reduce((acc, item) => acc + (Number(item.price) * Number(item.quantity)), 0);
         
         if (coupon) {
@@ -481,20 +503,24 @@ class Database {
                 .where("createdAt", "<", thirtyDaysAgo)
                 .get();
                 
-            const batch = db.batch();
-            let count = 0;
-            
+            const docsToDelete = [];
             snapshot.forEach(doc => {
                 const order = doc.data();
                 if (order.status === "cancelled") { // Ya no borramos los "completed" para mantener el historial
-                    batch.delete(doc.ref);
-                    count++;
+                    docsToDelete.push(doc.ref);
                 }
             });
             
-            if (count > 0) {
+            // Procesar en chunks de máximo 400 operaciones para respetar el límite de 500 de Firestore
+            for (let i = 0; i < docsToDelete.length; i += 400) {
+                const batch = db.batch();
+                const chunk = docsToDelete.slice(i, i + 400);
+                chunk.forEach(ref => batch.delete(ref));
                 await batch.commit();
-                console.log(`Se eliminaron automáticamente ${count} pedidos basura antiguos.`);
+            }
+
+            if (docsToDelete.length > 0) {
+                console.log(`Se eliminaron automáticamente ${docsToDelete.length} pedidos basura antiguos.`);
             }
         } catch(e) {
             console.error("Error en limpieza automática de pedidos:", e);

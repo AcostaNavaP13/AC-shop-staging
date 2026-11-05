@@ -14,8 +14,14 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow create, delete: if isAdmin();
-      // El cliente público solo puede actualizar el stock (quantity, sizes) al comprar
-      allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'sizes']);
+      // El cliente público solo puede DECREMENTAR el stock al comprar (nunca aumentar)
+      allow update: if isAdmin()
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quantity', 'sizes'])
+          && request.resource.data.quantity is int
+          && request.resource.data.quantity >= 0
+          && request.resource.data.quantity <= resource.data.quantity
+        );
     }
 
     match /settings/store {
@@ -29,12 +35,19 @@ service cloud.firestore {
       // Cualquiera puede buscar un cupón individual (para validar código en el carrito)
       allow get: if true;
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedByIps']);
+      allow update: if isAdmin()
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedByIps'])
+          && request.resource.data.usedByIps is list
+        );
     }
 
     match /orders/{orderId} {
-      // Cualquiera puede CREAR un pedido (al comprar)
-      allow create: if true;
+      // Cualquiera puede CREAR un pedido (al comprar) con estructura válida
+      allow create: if request.resource.data.items is list
+        && request.resource.data.total is number
+        && request.resource.data.total >= 0
+        && request.resource.data.status == 'pending';
       // Solo el admin puede leer, modificar o cancelar pedidos
       allow read, update, delete: if isAdmin();
     }

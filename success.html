@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AC Shop - Compra Exitosa</title>
+    <title>O&A Luxury - Compra Exitosa</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -41,20 +41,24 @@
         }
         
         /* Dark mode support */
-        body.dark-mode .order-id-box {
+        body.dark-theme .order-id-box {
             background-color: #1C1C1E;
             color: #F2F2F7;
             border-color: #3A3A3C;
         }
+        body.dark-theme {
+            background-color: #000000;
+            color: #FFFFFF;
+        }
     </style>
 </head>
-<body class="light-mode">
+<body>
     <div class="success-container">
         <div class="success-icon">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
         </div>
         <h1 style="font-size: 28px; margin-bottom: 12px;">¡Gracias por tu compra!</h1>
-        <p style="color: #8E8E93; max-width: 400px; line-height: 1.5; margin-bottom: 8px;">
+        <p id="order-status-msg" style="color: #8E8E93; max-width: 400px; line-height: 1.5; margin-bottom: 8px;">
             Hemos recibido tu pedido correctamente.
             <br><br>
             <strong>Estatus:</strong> Pendiente por autorizar. Una vez que validemos el pago, nos pondremos en contacto para el envío.
@@ -72,9 +76,9 @@
     <script src="data.js"></script>
     <script>
         // Aplicar el mismo tema (claro/oscuro) que tenga el usuario en la tienda
-        const savedTheme = localStorage.getItem('theme');
+        const savedTheme = localStorage.getItem('oa_theme');
         if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.body.classList.replace('light-mode', 'dark-mode');
+            document.body.classList.add('dark-theme');
         }
 
         // Extraer parámetros de la URL que manda Mercado Pago
@@ -99,9 +103,9 @@
 
                 if (pendingCart.length > 0) {
                     let buyerEmail = "No proporcionado";
-                    if (paymentId && paymentId !== "null") {
+                    if (paymentId && /^[0-9]+$/.test(paymentId)) {
                         try {
-                            const res = await fetch(`https://ac-shop-staging.vercel.app/get_payment_info?id=${paymentId}`);
+                            const res = await fetch(`https://ac-shop-staging.vercel.app/get_payment_info?id=${encodeURIComponent(paymentId)}`);
                             if (res.ok) {
                                 const data = await res.json();
                                 if (data.email) buyerEmail = data.email;
@@ -113,25 +117,30 @@
                     Database.createPendingOrder(pendingCart, pendingCoupon, formattedPaymentType, buyerEmail)
                         .then(({ orderId }) => {
                             document.getElementById('order-id-display').textContent = 'Pedido: ' + orderId;
+                            // Limpiar carrito y datos temporales tras registrar pedido exitosamente
+                            localStorage.removeItem('oa_cart');
+                            localStorage.removeItem('oa_applied_coupon');
+                            localStorage.removeItem('oa_mp_pending_cart');
+                            localStorage.removeItem('oa_mp_pending_coupon');
                         })
                         .catch(err => {
                             console.error('Error al registrar pedido:', err);
                             document.getElementById('order-id-display').textContent = 'Revisa tu correo para el número de pedido.';
+                            // En caso de fallo no borramos el carrito pendiente para que el usuario no pierda su registro
                         });
+                } else {
+                    document.getElementById('order-id-display').textContent = 'Pedido procesado.';
                 }
 
-                // Limpiar carrito y datos temporales
-                localStorage.removeItem('oa_cart');
-                localStorage.removeItem('oa_applied_coupon');
-                localStorage.removeItem('oa_mp_pending_cart');
-                localStorage.removeItem('oa_mp_pending_coupon');
-
                 if (paymentStatus === 'pending') {
-                    document.querySelector('p').innerHTML = `
-                        Hemos recibido tu pedido correctamente.<br><br>
-                        <strong>Estatus:</strong> Pago pendiente de acreditación (ej. OXXO). 
-                        Una vez confirmado, nos pondremos en contacto para coordinar el envío.
-                    `;
+                    const statusMsg = document.getElementById('order-status-msg');
+                    if (statusMsg) {
+                        statusMsg.innerHTML = `
+                            Hemos recibido tu pedido correctamente.<br><br>
+                            <strong>Estatus:</strong> Pago pendiente de acreditación (ej. OXXO). 
+                            Una vez confirmado, nos pondremos en contacto para coordinar el envío.
+                        `;
+                    }
                 }
 
             } else {

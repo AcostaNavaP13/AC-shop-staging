@@ -15,7 +15,7 @@ const systemLogs = [];
 
 window.addLog = function(type, message) {
     const time = new Date().toLocaleTimeString();
-    systemLogs.push(`[${time}] [${type.toUpperCase()}] ${message}`);
+    systemLogs.push(`[${time}] [${type.toUpperCase()}] ${escapeHtml(message)}`);
     const logsContainer = document.getElementById("system-logs-container");
     if(logsContainer) {
         logsContainer.innerHTML = systemLogs.join("<br/>");
@@ -364,7 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     storeName: newStoreName,
                     heroTitle: newHeroTitle,
                     heroSubtitle: newHeroSubtitle,
-                    orderExpirationHours: orderExpiration,
+                    orderExpirationHours: Number(orderExpiration) || 24,
                     announcementEnabled,
                     announcementText,
                     mpInstallments,
@@ -781,29 +781,63 @@ document.addEventListener("DOMContentLoaded", () => {
                     const rows = text.split(/\r?\n/);
                     let count = 0;
 
+                    function parseCsvLine(str) {
+                        const values = [];
+                        let cur = '';
+                        let inQuotes = false;
+                        for (let j = 0; j < str.length; j++) {
+                            const c = str[j];
+                            if (c === '"') {
+                                inQuotes = !inQuotes;
+                            } else if (c === ',' && !inQuotes) {
+                                values.push(cur.trim());
+                                cur = '';
+                            } else {
+                                cur += c;
+                            }
+                        }
+                        values.push(cur.trim());
+                        return values;
+                    }
+
                     for(let i = 1; i < rows.length; i++) {
                         const line = rows[i].trim();
                         if (!line) continue;
-                        const row = line.split(",");
+                        const row = parseCsvLine(line);
 
                         if (row.length >= 7) {
-                            const sku = row[0].trim().toUpperCase();
-                            const name = row[1].trim();
-                            const price = parseFloat(row[2]);
-                            const qty = parseInt(row[3], 10);
-                            const category = row[4].trim();
-                            const brand = row[5].trim();
-                            const size = row[6].trim();
+                            const sku = row[0].replace(/^"|"$/g, '').trim().toUpperCase();
+                            const name = row[1].replace(/^"|"$/g, '').trim();
+                            const price = parseFloat(row[2].replace(/^"|"$/g, ''));
+                            const qty = parseInt(row[3].replace(/^"|"$/g, ''), 10);
+                            const category = row[4].replace(/^"|"$/g, '').trim();
+                            const brand = row[5].replace(/^"|"$/g, '').trim();
+                            const size = row[6].replace(/^"|"$/g, '').trim();
 
                             if (name && !Number.isNaN(price) && !Number.isNaN(qty)) {
-                                await Database.addProduct({ sku, name, price, quantity: qty, category, brand, size });
+                                let sizes = [];
+                                if (size && size.includes("-") && size !== "Unitalla") {
+                                    const rawVariants = size.split("-").map(v => v.trim()).filter(Boolean);
+                                    if (rawVariants.length > 1) {
+                                        const baseQty = Math.floor(qty / rawVariants.length);
+                                        const remainder = qty % rawVariants.length;
+                                        sizes = rawVariants.map((v, idx) => ({
+                                            name: v,
+                                            qty: baseQty + (idx === 0 ? remainder : 0)
+                                        }));
+                                    }
+                                }
+                                await Database.addProduct({ 
+                                    sku, name, price, quantity: qty, category, brand, size,
+                                    ...(sizes.length > 0 && { sizes })
+                                });
                                 count++;
                             }
                         } else if (row.length >= 4) {
-                            const sku = row[0].trim().toUpperCase();
-                            const name = row[1].trim();
-                            const price = parseFloat(row[2]);
-                            const qty = parseInt(row[3], 10);
+                            const sku = row[0].replace(/^"|"$/g, '').trim().toUpperCase();
+                            const name = row[1].replace(/^"|"$/g, '').trim();
+                            const price = parseFloat(row[2].replace(/^"|"$/g, ''));
+                            const qty = parseInt(row[3].replace(/^"|"$/g, ''), 10);
                             if (name && !Number.isNaN(price) && !Number.isNaN(qty)) {
                                 await Database.addProduct({ sku, name, price, quantity: qty, category: "General", brand: "Generica", size: "Unitalla" });
                                 count++;
@@ -979,8 +1013,8 @@ async function renderAdminTable() {
                 const sizesStr = p.sizes.map(s => `<b>${escapeHtml(s.name)}</b>: ${s.qty}`).join(", ");
                 stockHtml = `<div style="font-size:12px;color:#8E8E93;line-height:1.4;">${sizesStr}</div>
                              <div style="font-weight:600;margin-top:2px;">Total: ${p.quantity}</div>`;
-                const sizesJson = escapeHtml(JSON.stringify(p.sizes));
-                stockEditor = `<button class="ios-btn secondary-btn" style="padding:4px 8px; font-size:11px;" onclick="openEditSizesModal('${p.id}', '${sizesJson}')">Editar Variantes</button>`;
+                const sizesEncoded = encodeURIComponent(JSON.stringify(p.sizes || []));
+                stockEditor = `<button class="ios-btn secondary-btn" style="padding:4px 8px; font-size:11px;" onclick="openEditSizesModal('${productId}', '${sizesEncoded}')">Editar Variantes</button>`;
             } else {
                 metaText += ` • Variante: ${escapeHtml(p.size || "N/A")}`;
                 stockHtml = `<div style="font-weight:600;">Total: ${p.quantity || 0}</div>`;
@@ -1075,13 +1109,13 @@ window.renderOrdersTable = async function() {
                 paymentBadge = `<div style="margin-top: 4px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-block; background-color: ${isMp ? '#E5F3FF' : '#E5F9E4'}; color: ${isMp ? '#009EE3' : '#34C759'};">${escapeHtml(order.paymentMethod)}</div>`;
             }
 
-            let itemsHtml = order.items.map(item => `<div>${item.quantity}x ${item.name} (${item.size})</div>`).join("");
+            let itemsHtml = (order.items || []).map(item => `<div>${Number(item.quantity)}x ${escapeHtml(item.name || '')} (${escapeHtml(item.size || 'N/A')})</div>`).join("");
 
             tr.innerHTML = `
-                <td style="font-weight: 600;">${order.id}<br/>${paymentBadge}${emailHtml}</td>
-                <td style="font-size: 13px;">${dateStr}${commitHtml}</td>
+                <td style="font-weight: 600;">${escapeHtml(order.id)}<br/>${paymentBadge}${emailHtml}</td>
+                <td style="font-size: 13px;">${escapeHtml(dateStr)}${commitHtml}</td>
                 <td style="font-size: 13px;">${itemsHtml}</td>
-                <td style="font-weight: 600;">$${Number(order.total).toFixed(2)}</td>
+                <td style="font-weight: 600;">$${Number(order.total || 0).toFixed(2)}</td>
                 <td>
                     <span class="order-countdown" 
                           data-created="${order.createdAt?.seconds || 0}" 
@@ -1176,7 +1210,7 @@ window.renderHistoryTable = async function() {
                 paymentBadge = `<div style="margin-top: 4px; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-block; background-color: ${isMp ? '#E5F3FF' : '#E5F9E4'}; color: ${isMp ? '#009EE3' : '#34C759'};">${escapeHtml(order.paymentMethod)}</div>`;
             }
 
-            let itemsHtml = order.items.map(item => `<div style="margin-bottom:2px;">${item.quantity}x ${item.name} <span style="color:var(--text-secondary);font-size:11px;">(${item.size || 'N/A'})</span></div>`).join("");
+            let itemsHtml = (order.items || []).map(item => `<div style="margin-bottom:2px;">${Number(item.quantity)}x ${escapeHtml(item.name || '')} <span style="color:var(--text-secondary);font-size:11px;">(${escapeHtml(item.size || 'N/A')})</span></div>`).join("");
 
             let statusHtml = "";
             if (order.status === "completed") {
@@ -1186,10 +1220,10 @@ window.renderHistoryTable = async function() {
             }
 
             tr.innerHTML = `
-                <td style="font-weight: 600;">${order.id}<br/>${paymentBadge}${emailHtml}</td>
-                <td style="font-size: 13px; color: var(--text-secondary);">${dateStr}</td>
+                <td style="font-weight: 600;">${escapeHtml(order.id)}<br/>${paymentBadge}${emailHtml}</td>
+                <td style="font-size: 13px; color: var(--text-secondary);">${escapeHtml(dateStr)}</td>
                 <td style="font-size: 13px;">${itemsHtml}</td>
-                <td style="font-weight: 600; color: #000;">$${Number(order.total).toFixed(2)}</td>
+                <td style="font-weight: 600; color: #000;">$${Number(order.total || 0).toFixed(2)}</td>
                 <td>${statusHtml}</td>
             `;
             listBody.appendChild(tr);
@@ -1341,9 +1375,19 @@ window.deleteImageFromList = async function(index) {
     await Database.updateProductImages(currentProductId, currentImageUrls);
 };
 
-window.openEditSizesModal = function(productId, sizesJsonStr) {
+window.openEditSizesModal = function(productId, sizesEncodedOrJson) {
     currentProductId = productId;
-    const sizes = JSON.parse(sizesJsonStr.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+    let sizes = [];
+    try {
+        sizes = JSON.parse(decodeURIComponent(sizesEncodedOrJson));
+    } catch(e) {
+        try {
+            sizes = JSON.parse(sizesEncodedOrJson.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+        } catch(err2) {
+            console.error("Error al parsear variantes:", err2);
+            sizes = [];
+        }
+    }
     const container = document.getElementById("edit-sizes-container");
     container.innerHTML = "";
     sizes.forEach(s => {
@@ -1415,13 +1459,22 @@ window.saveEditedSizes = async function() {
         alert("Error guardando variantes: " + err.message);
     }
 };
-window.openDeveloperAuth = function() {
+window.openDeveloperAuth = async function() {
     const code = prompt("Introduce el código de desarrollador:");
-    if (code === "Na130916") {
-        document.getElementById("tab-developer").style.display = "block";
-        switchAdminTab("tab-developer", document.querySelector("button[onclick='openDeveloperAuth()']"));
-    } else if (code !== null) {
-        alert("Código incorrecto.");
+    if (!code) return;
+    try {
+        const msgBuffer = new TextEncoder().encode(code);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        if (hashHex === "224d044442af3e56b74875f931b2208122f861ae8f20ab3837c85d65cc1c5c3b") {
+            document.getElementById("tab-developer").style.display = "block";
+            switchAdminTab("tab-developer", document.querySelector("button[onclick='openDeveloperAuth()']"));
+        } else {
+            alert("Código incorrecto.");
+        }
+    } catch(e) {
+        alert("Error al verificar código.");
     }
 };
 
