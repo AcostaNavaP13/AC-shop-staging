@@ -4,8 +4,8 @@ let IS_DISCOUNTS_ENABLED = true;
 let IS_COUPONS_ENABLED = false;
 let IS_RELATED_ENABLED = true;
 let IS_MERCADOPAGO_ENABLED = true;
-let MP_INSTALLMENTS = 12;
 let MP_ALLOW_CASH = true;
+let MP_ACCESS_TOKEN = "";
 let appliedCoupon = null;
 let userIpAddress = "unknown";
 let allProducts = [];
@@ -116,8 +116,8 @@ async function renderCatalog() {
         IS_COUPONS_ENABLED = settings.couponsEnabled !== false;
         IS_RELATED_ENABLED = settings.relatedEnabled !== false;
         IS_MERCADOPAGO_ENABLED = settings.mercadopagoEnabled !== false;
-        MP_INSTALLMENTS = settings.mpInstallments || 12;
         MP_ALLOW_CASH = settings.mpAllowCash !== false;
+        MP_ACCESS_TOKEN = (settings.mpAccessToken || "").trim();
 
         // Fetch IP if coupons are enabled
         if (IS_COUPONS_ENABLED && userIpAddress === "unknown") {
@@ -1121,15 +1121,19 @@ window.executeCheckout = async function(method = 'whatsapp') {
             localStorage.setItem("oa_mp_pending_cart", JSON.stringify(cart));
             if (appliedCoupon) localStorage.setItem("oa_mp_pending_coupon", JSON.stringify(appliedCoupon));
 
+            const payload = { 
+                items: mpItems, 
+                orderId: 'TEMP',
+                allowCash: MP_ALLOW_CASH
+            };
+            if (MP_ACCESS_TOKEN) {
+                payload.mpAccessToken = MP_ACCESS_TOKEN;
+            }
+
             const response = await fetch("https://ac-shop-staging.vercel.app/create_preference", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    items: mpItems, 
-                    orderId: 'TEMP',
-                    installments: MP_INSTALLMENTS,
-                    allowCash: MP_ALLOW_CASH
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {

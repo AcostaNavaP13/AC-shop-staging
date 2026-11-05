@@ -233,14 +233,26 @@ document.addEventListener("DOMContentLoaded", () => {
             if (announceTextInput) announceTextInput.value = settings.announcementText || "";
 
             const mpConfigModule = document.getElementById("mp-config-module");
-            const mpInstallments = document.getElementById("mp-installments");
+            const mpAccessTokenInput = document.getElementById("mp-access-token");
+            const mpAccountStatus = document.getElementById("mp-account-status");
             const mpAllowCash = document.getElementById("mp-allow-cash");
             
             if (mpConfigModule) {
-                mpConfigModule.style.display = settings.mercadopagoEnabled ? "block" : "none";
+                mpConfigModule.style.display = settings.mercadopagoEnabled !== false ? "block" : "none";
             }
-            if (mpInstallments) {
-                mpInstallments.value = settings.mpInstallments ? String(settings.mpInstallments) : "12";
+            if (mpAccessTokenInput) {
+                mpAccessTokenInput.value = settings.mpAccessToken || "";
+            }
+            if (mpAccountStatus) {
+                if (settings.mpAccessToken && settings.mpAccessToken.trim()) {
+                    const t = settings.mpAccessToken.trim();
+                    const masked = t.length > 12 
+                        ? `${t.substring(0, 8)}••••••••${t.slice(-4)}`
+                        : "••••••••";
+                    mpAccountStatus.innerHTML = `<span style="color:var(--apple-green); font-weight:600;">✓ Cuenta vinculada:</span> <code style="background:#E5E5EA; padding:2px 6px; border-radius:4px; font-size:11px;">${escapeHtml(masked)}</code>`;
+                } else {
+                    mpAccountStatus.innerHTML = `<span style="color:var(--apple-blue); font-weight:500;">ℹ Usando cuenta predeterminada del servidor</span>`;
+                }
             }
             if (mpAllowCash) {
                 mpAllowCash.checked = settings.mpAllowCash !== false; // defaults to true
@@ -356,7 +368,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const announcementEnabled = document.getElementById("announcement-enabled") ? document.getElementById("announcement-enabled").checked : false;
                 const announcementText = document.getElementById("announcement-text") ? document.getElementById("announcement-text").value : "";
-                const mpInstallments = document.getElementById("mp-installments") ? parseInt(document.getElementById("mp-installments").value) : 12;
+                const mpAccessToken = document.getElementById("mp-access-token") ? document.getElementById("mp-access-token").value.trim() : "";
                 const mpAllowCash = document.getElementById("mp-allow-cash") ? document.getElementById("mp-allow-cash").checked : true;
 
                 await Database.saveSettings({ 
@@ -367,10 +379,22 @@ document.addEventListener("DOMContentLoaded", () => {
                     orderExpirationHours: Number(orderExpiration) || 24,
                     announcementEnabled,
                     announcementText,
-                    mpInstallments,
+                    mpAccessToken,
                     mpAllowCash,
                     ...(logoUrl && { logoUrl })
                 });
+
+                const mpAccountStatus = document.getElementById("mp-account-status");
+                if (mpAccountStatus) {
+                    if (mpAccessToken) {
+                        const masked = mpAccessToken.length > 12 
+                            ? `${mpAccessToken.substring(0, 8)}••••••••${mpAccessToken.slice(-4)}`
+                            : "••••••••";
+                        mpAccountStatus.innerHTML = `<span style="color:var(--apple-green); font-weight:600;">✓ Cuenta vinculada:</span> <code style="background:#E5E5EA; padding:2px 6px; border-radius:4px; font-size:11px;">${escapeHtml(masked)}</code>`;
+                    } else {
+                        mpAccountStatus.innerHTML = `<span style="color:var(--apple-blue); font-weight:500;">ℹ Usando cuenta predeterminada del servidor</span>`;
+                    }
+                }
 
                 alert("Configuración guardada correctamente.");
             } catch (err) {
@@ -1475,6 +1499,12 @@ window.openDeveloperAuth = async function() {
     } catch(e) {
         alert("Error al verificar código.");
     }
+};
+
+window.toggleMpTokenVisibility = function() {
+    const input = document.getElementById("mp-access-token");
+    if (!input) return;
+    input.type = input.type === "password" ? "text" : "password";
 };
 
 window.addCatBannerRow = function(category = "", imageUrl = "") {

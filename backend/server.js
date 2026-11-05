@@ -55,7 +55,25 @@ app.post('/create_preference', async (req, res) => {
         const storeFrontUrl = process.env.FRONTEND_URL || "https://acostanavap13.github.io/AC-shop-staging";
         const webhookUrl = process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/webhook` : "https://ac-shop-staging.vercel.app/webhook";
 
-        const installments = Math.min(Math.max(parseInt(req.body.installments, 10) || 12, 1), 24);
+        const mpAccessToken = (req.body.mpAccessToken && String(req.body.mpAccessToken).trim())
+            ? String(req.body.mpAccessToken).trim()
+            : process.env.MP_ACCESS_TOKEN;
+
+        if (!mpAccessToken) {
+            return res.status(500).json({ error: 'Falta configurar el Access Token de Mercado Pago' });
+        }
+
+        const allowCash = req.body.allowCash !== false && req.body.allowCash !== 'false';
+        const paymentMethods = {};
+        if (!allowCash) {
+            paymentMethods.excluded_payment_types = [
+                { id: "ticket" },
+                { id: "atm" }
+            ];
+        }
+        if (req.body.installments) {
+            paymentMethods.installments = Math.min(Math.max(parseInt(req.body.installments, 10) || 1, 1), 24);
+        }
 
         const body = {
             items: mpItems,
@@ -67,14 +85,10 @@ app.post('/create_preference', async (req, res) => {
             auto_return: "approved",
             external_reference: String(req.body.orderId || ('ORD-' + Date.now())).substring(0, 50),
             notification_url: webhookUrl,
-            payment_methods: {
-                installments: installments, 
-                ...(req.body.allowCash === false && {
-                    excluded_payment_types: [{ id: "ticket" }, { id: "atm" }]
-                })
-            }
+            payment_methods: paymentMethods
         };
 
+        const client = new MercadoPagoConfig({ accessToken: mpAccessToken });
         const preference = new Preference(client);
         const result = await preference.create({ body });
         
@@ -115,10 +129,18 @@ app.get('/get_payment_info', async (req, res) => {
             return res.status(400).json({ error: 'ID de pago inválido o no proporcionado' });
         }
 
+        const mpAccessToken = (req.query.token && String(req.query.token).trim())
+            || (req.headers['x-mp-access-token'] && String(req.headers['x-mp-access-token']).trim())
+            || process.env.MP_ACCESS_TOKEN;
+
+        if (!mpAccessToken) {
+            return res.status(500).json({ error: 'Falta configurar el Access Token de Mercado Pago' });
+        }
+
         const fetchFn = typeof fetch !== 'undefined' ? fetch : (...args) => import('node-fetch').then(({default: f}) => f(...args));
         const response = await fetchFn(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
             headers: {
-                Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`
+                Authorization: `Bearer ${mpAccessToken}`
             }
         });
 

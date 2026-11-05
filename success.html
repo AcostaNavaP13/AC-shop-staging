@@ -105,7 +105,14 @@
                     let buyerEmail = "No proporcionado";
                     if (paymentId && /^[0-9]+$/.test(paymentId)) {
                         try {
-                            const res = await fetch(`https://ac-shop-staging.vercel.app/get_payment_info?id=${encodeURIComponent(paymentId)}`);
+                            let tokenParam = "";
+                            try {
+                                const settings = await Database.getSettings();
+                                if (settings && settings.mpAccessToken) {
+                                    tokenParam = `&token=${encodeURIComponent(settings.mpAccessToken.trim())}`;
+                                }
+                            } catch(tokenErr) {}
+                            const res = await fetch(`https://ac-shop-staging.vercel.app/get_payment_info?id=${encodeURIComponent(paymentId)}${tokenParam}`);
                             if (res.ok) {
                                 const data = await res.json();
                                 if (data.email) buyerEmail = data.email;

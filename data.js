@@ -75,6 +75,8 @@ class Database {
         if(settings.couponsEnabled !== undefined) updateData.couponsEnabled = Boolean(settings.couponsEnabled);
         if(settings.relatedEnabled !== undefined) updateData.relatedEnabled = Boolean(settings.relatedEnabled);
         if(settings.mercadopagoEnabled !== undefined) updateData.mercadopagoEnabled = Boolean(settings.mercadopagoEnabled);
+        if(settings.mpAllowCash !== undefined) updateData.mpAllowCash = Boolean(settings.mpAllowCash);
+        if(settings.mpAccessToken !== undefined) updateData.mpAccessToken = String(settings.mpAccessToken).trim();
 
         await db.collection("settings").doc("store").set(updateData, { merge: true });
     }
